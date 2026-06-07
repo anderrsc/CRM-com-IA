@@ -129,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onPageChange }) =
               M
             </div>
             <div className={cn('min-w-0 transition-all duration-200', !isExpanded && 'md:hidden')}>
-              <h1 className="truncate text-sm font-bold tracking-wide text-white">Marquinhos OS</h1>
+              <h1 className="truncate text-sm font-bold tracking-wide text-white">Marquinhos</h1>
               <p className="truncate text-xs font-medium text-red-100/60">Sistema Inteligente</p>
             </div>
           </button>

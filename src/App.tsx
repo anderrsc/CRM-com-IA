@@ -217,7 +217,7 @@ const SettingsPage: React.FC = () => {
   const isOverdue = subscription.status === 'overdue' || daysToDue < 0;
 
   const buildChargeText = () => [
-    'COBRANCA DE ASSINATURA - Marquinhos OS',
+    'COBRANCA DE ASSINATURA - Marquinhos',
     '',
     `Cliente: ${subscription.customerName}`,
     `Documento: ${subscription.customerDocument}`,
@@ -301,10 +301,10 @@ const SettingsPage: React.FC = () => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
-            { label: 'Nome', value: 'Marquinhos OS', icon: Building2 },
+            { label: 'Nome', value: 'Marquinhos', icon: Building2 },
             { label: 'CNPJ', value: '00.000.000/0001-00', icon: Shield },
             { label: 'Telefone', value: '(44) 99999-0000', icon: Phone },
-            { label: 'E-mail', value: 'contato@marquinhosos.com', icon: Mail },
+            { label: 'E-mail', value: 'contato@marquinhos.com', icon: Mail },
           ].map((item) => (
             <div key={item.label} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2 text-gray-400 mb-2">
@@ -351,7 +351,9 @@ const SettingsPage: React.FC = () => {
               value={newUser.role}
               onChange={(event) => setNewUser((user) => ({ ...user, role: event.target.value as UserRole }))}
               options={[
+                { value: 'gerente', label: 'Gerente' },
                 { value: 'vendedor', label: 'Vendedor' },
+                { value: 'secretaria', label: 'Secretaria' },
                 { value: 'producao', label: 'Producao' },
                 { value: 'instalador', label: 'Instalador' },
                 { value: 'admin', label: 'Admin' },

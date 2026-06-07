@@ -207,7 +207,7 @@ export const Orcamentos: React.FC = () => {
       return;
     }
 
-    const subject = encodeURIComponent(`Orçamento Marquinhos OS - ${budget.leadName}`);
+    const subject = encodeURIComponent(`Orçamento Marquinhos - ${budget.leadName}`);
     const body = encodeURIComponent(buildBudgetText(budget));
     window.location.href = `mailto:${lead.email}?subject=${subject}&body=${body}`;
   };
@@ -611,7 +611,7 @@ export const Orcamentos: React.FC = () => {
                   M
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold">Marquinhos OS</h1>
+                  <h1 className="text-xl font-bold">Marquinhos</h1>
                   <p className="text-sm text-gray-500">CNPJ: 00.000.000/0001-00</p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 -- ============================================================
--- Marquinhos OS CRM - Schema completo
+-- Marquinhos CRM - Schema completo
 -- Execute no SQL Editor do Supabase
 -- ============================================================
 
@@ -13,7 +13,7 @@ create table if not exists public.app_users (
   id text primary key,
   name text not null,
   email text not null unique,
-  role text not null check (role in ('admin', 'vendedor', 'producao', 'instalador')),
+  role text not null check (role in ('admin', 'gerente', 'vendedor', 'secretaria', 'producao', 'instalador')),
   password_hash text not null,
   avatar text,
   phone text,
@@ -33,12 +33,14 @@ create table if not exists public.leads (
   zip_code text,
   origin text not null check (origin in ('whatsapp', 'instagram', 'telefone', 'indicacao', 'site', 'outro')),
   service text not null default 'A definir',
-  status text not null default 'novo' check (status in ('novo', 'aguardando_info', 'visita_agendada', 'visita_realizada', 'orcamento_enviado', 'negociacao', 'fechado', 'producao', 'instalacao', 'finalizado')),
+  status text not null default 'novo' check (status in ('novo', 'primeiro_atendimento', 'qualificado', 'aguardando_medidas', 'aguardando_info', 'visita_agendada', 'visita_realizada', 'orcamento_enviado', 'negociacao', 'fechado', 'producao', 'instalacao', 'pos_venda', 'finalizado', 'perdido')),
   urgency text not null default 'media' check (urgency in ('baixa', 'media', 'alta', 'urgente')),
   availability text,
   observations text,
   ai_summary text,
   assigned_to text,
+  potential_value numeric(12,2) not null default 0,
+  last_interaction_at timestamptz,
   attachments jsonb not null default '[]'::jsonb,
   messages jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
@@ -335,7 +337,7 @@ insert into public.subscriptions (
   due_day, next_due_date, payment_method, notes
 )
 values (
-  'main', 'Marquinhos OS', '00.000.000/0001-00', 'financeiro@marquinhosos.com',
+  'main', 'Marquinhos', '00.000.000/0001-00', 'financeiro@marquinhos.com',
   'professional', 'trial', 297, 'monthly', 10,
   10, current_date + interval '7 days', 'pix',
   'Assinatura em periodo de implantacao.'

@@ -1,6 +1,9 @@
-# Marquinhos OS CRM
+# Marquinhos CRM
 
-Sistema CRM completo para esquadrias, aluminio, vidros e calhas.
+Sistema SaaS/CRM para esquadrias, aluminio, vidros, calhas, rufos e instalacao tecnica.
+
+Visao de produto: transformar o Marquinhos no Salesforce das Esquadrias.
+Roadmap completo em `SAAS_ROADMAP.md`.
 
 ## Login inicial ADM
 
@@ -33,6 +36,12 @@ O sistema nao carrega dados de teste: os cadastros comecam vazios e sao salvos n
 
 ```text
 supabase/migrations/20260606133000_initial_schema.sql
+```
+
+Se o banco ja foi criado antes, execute tambem a migration incremental:
+
+```text
+supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
 ```
 
 3. No Vercel, configure as variaveis de ambiente:

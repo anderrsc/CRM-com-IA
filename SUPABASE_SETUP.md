@@ -1,4 +1,4 @@
-# Configuracao do Supabase - Marquinhos OS
+# Configuracao do Supabase - Marquinhos
 
 ## 1. Criar o banco de dados
 
@@ -9,6 +9,14 @@
 5. Clique em **Run**.
 
 O script cria tabelas, indices, RLS, policies e dados iniciais.
+
+Se o banco ja existe e voce ja rodou o script inicial, rode tambem:
+
+```text
+supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
+```
+
+Esse upgrade adiciona o novo funil estilo Salesforce, papeis de gerente/secretaria e os campos de valor potencial e ultima interacao.
 
 ## 2. Tabelas usadas pelo CRM
 

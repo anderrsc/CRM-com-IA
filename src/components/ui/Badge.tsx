@@ -60,18 +60,22 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; variant: BadgeProps['variant']; dot?: boolean }> = {
-  novo: { label: 'Novo', variant: 'info', dot: true },
+  novo: { label: 'Novo Lead', variant: 'info', dot: true },
+  primeiro_atendimento: { label: 'Primeiro Atendimento', variant: 'info', dot: true },
+  qualificado: { label: 'Qualificado', variant: 'success', dot: true },
+  aguardando_medidas: { label: 'Aguardando Medidas', variant: 'warning', dot: true },
   aguardando_info: { label: 'Aguardando', variant: 'warning', dot: true },
   visita_agendada: { label: 'Visita Agendada', variant: 'red', dot: true },
   visita_realizada: { label: 'Visita OK', variant: 'info' },
-  orcamento_enviado: { label: 'Orçamento', variant: 'red' },
-  negociacao: { label: 'Negociação', variant: 'warning', dot: true },
+  orcamento_enviado: { label: 'Em Orcamento', variant: 'red' },
+  negociacao: { label: 'Negociacao', variant: 'warning', dot: true },
   fechado: { label: 'Fechado', variant: 'success' },
-  producao: { label: 'Produção', variant: 'warning' },
-  instalacao: { label: 'Instalação', variant: 'info' },
+  producao: { label: 'Producao', variant: 'warning' },
+  instalacao: { label: 'Instalacao', variant: 'info' },
+  pos_venda: { label: 'Pos-venda', variant: 'info' },
   finalizado: { label: 'Finalizado', variant: 'success' },
+  perdido: { label: 'Perdido', variant: 'default' },
 };
-
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const config = statusConfig[status] || { label: status, variant: 'default' };
   return (

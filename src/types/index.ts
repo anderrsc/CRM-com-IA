@@ -1,5 +1,5 @@
 // User types
-export type UserRole = 'admin' | 'vendedor' | 'producao' | 'instalador';
+export type UserRole = 'admin' | 'gerente' | 'vendedor' | 'secretaria' | 'producao' | 'instalador';
 
 export interface User {
   id: string;
@@ -15,6 +15,9 @@ export interface User {
 // Lead/Client types
 export type LeadStatus = 
   | 'novo'
+  | 'primeiro_atendimento'
+  | 'qualificado'
+  | 'aguardando_medidas'
   | 'aguardando_info'
   | 'visita_agendada'
   | 'visita_realizada'
@@ -23,7 +26,9 @@ export type LeadStatus =
   | 'fechado'
   | 'producao'
   | 'instalacao'
-  | 'finalizado';
+  | 'pos_venda'
+  | 'finalizado'
+  | 'perdido';
 
 export type LeadOrigin = 'whatsapp' | 'instagram' | 'telefone' | 'indicacao' | 'site' | 'outro';
 export type UrgencyLevel = 'baixa' | 'media' | 'alta' | 'urgente';
@@ -46,6 +51,8 @@ export interface Lead {
   observations?: string;
   aiSummary?: string;
   assignedTo?: string;
+  potentialValue?: number;
+  lastInteractionAt?: Date;
   attachments: Attachment[];
   messages: Message[];
   createdAt: Date;

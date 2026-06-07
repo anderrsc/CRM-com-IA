@@ -76,7 +76,7 @@ export const buildBudgetText = (budget: Budget) => {
     : budget.discount;
 
   return [
-    'ORCAMENTO - Marquinhos OS',
+    'ORCAMENTO - Marquinhos',
     '',
     `Cliente: ${budget.leadName}`,
     `Numero: ${budget.id.slice(0, 8).toUpperCase()}`,
@@ -97,7 +97,7 @@ export const buildBudgetText = (budget: Budget) => {
 };
 
 export const buildVisitText = (visit: Visit) => [
-  'FICHA DE VISITA - Marquinhos OS',
+  'FICHA DE VISITA - Marquinhos',
   '',
   `Cliente: ${visit.leadName}`,
   `Telefone: ${visit.phone}`,

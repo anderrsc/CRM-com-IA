@@ -62,7 +62,7 @@ export const Instalacao: React.FC = () => {
     const installation = installations.find(i => i.id === installationId);
     updateInstallation(installationId, { status, notes });
     if (installation && status === 'concluida') {
-      updateLeadStatus(installation.leadId, 'finalizado');
+      updateLeadStatus(installation.leadId, 'pos_venda');
       addNotification({
         id: uuidv4(),
         type: 'success',

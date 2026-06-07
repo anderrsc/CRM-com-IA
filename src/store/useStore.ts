@@ -99,18 +99,22 @@ export const useStore = create<AppState>()(
             budgets,
             productions,
             installations,
+            measurementSheets,
             knowledgeBase,
             subscriptions,
             users,
+            notifications,
           ] = await Promise.all([
             api.listData<Lead>('leads'),
             api.listData<Visit>('visits'),
             api.listData<Budget>('budgets'),
             api.listData<Production>('productions'),
             api.listData<Installation>('installations'),
+            api.listData<MeasurementSheet>('measurementSheets'),
             api.listData<KnowledgeItem>('knowledgeBase'),
             api.listData<Subscription & { id: string }>('subscriptions'),
             api.listData<User>('users'),
+            api.listData<Notification>('notifications'),
           ]);
 
           set((state) => ({
@@ -120,9 +124,11 @@ export const useStore = create<AppState>()(
             budgets,
             productions,
             installations,
+            measurementSheets,
             knowledgeBase,
             subscription: subscriptions[0] || state.subscription,
             users,
+            notifications,
           }));
         } catch (error) {
           console.warn('Banco indisponivel, usando dados locais', error);
@@ -161,9 +167,9 @@ export const useStore = create<AppState>()(
 
       // Subscription
       subscription: {
-        customerName: 'Marquinhos OS',
+        customerName: 'Marquinhos',
         customerDocument: '00.000.000/0001-00',
-        customerEmail: 'financeiro@marquinhosos.com',
+        customerEmail: 'financeiro@marquinhos.com',
         plan: 'professional',
         status: 'trial',
         amount: 297,
@@ -195,7 +201,7 @@ export const useStore = create<AppState>()(
         return { leads };
       }),
       updateLeadStatus: (id, status) => set((state) => {
-        const leads = state.leads.map(l => l.id === id ? { ...l, status, updatedAt: new Date() } : l);
+        const leads = state.leads.map(l => l.id === id ? { ...l, status, lastInteractionAt: new Date(), updatedAt: new Date() } : l);
         const updated = leads.find(l => l.id === id);
         if (updated) syncSave('leads', updated);
         return { leads };
@@ -296,13 +302,20 @@ export const useStore = create<AppState>()(
       
       // Notifications
       notifications: [],
-      addNotification: (notification) => set((state) => ({ 
-        notifications: [notification, ...state.notifications].slice(0, 50) 
-      })),
-      markNotificationRead: (id) => set((state) => ({
-        notifications: state.notifications.map(n => n.id === id ? { ...n, read: true } : n)
-      })),
-      clearNotifications: () => set({ notifications: [] }),
+      addNotification: (notification) => set((state) => {
+        syncSave('notifications', notification);
+        return { notifications: [notification, ...state.notifications].slice(0, 50) };
+      }),
+      markNotificationRead: (id) => set((state) => {
+        const notifications = state.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+        const updated = notifications.find(n => n.id === id);
+        if (updated) syncSave('notifications', updated);
+        return { notifications };
+      }),
+      clearNotifications: () => set((state) => {
+        state.notifications.forEach((notification) => syncDelete('notifications', notification.id));
+        return { notifications: [] };
+      }),
       
       // UI State
       sidebarOpen: true,
@@ -311,7 +324,7 @@ export const useStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
     }),
     {
-      name: 'marquinhos-os-storage',
+      name: 'marquinhos-storage',
       version: 3,
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,

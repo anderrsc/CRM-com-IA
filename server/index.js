@@ -148,5 +148,5 @@ app.post('/api/ai/analyze', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`API Marquinhos OS rodando em http://127.0.0.1:${port}`);
+  console.log(`API Marquinhos rodando em http://127.0.0.1:${port}`);
 });

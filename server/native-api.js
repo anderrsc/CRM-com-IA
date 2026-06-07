@@ -156,5 +156,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`API Marquinhos OS rodando em http://127.0.0.1:${port}`);
+  console.log(`API Marquinhos rodando em http://127.0.0.1:${port}`);
 });

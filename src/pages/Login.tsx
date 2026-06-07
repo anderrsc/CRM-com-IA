@@ -55,7 +55,7 @@ export const Login: React.FC = () => {
 
           <h1 className="text-4xl font-bold mb-3 text-center">
             <span className="bg-gradient-to-r from-white via-red-200 to-red-200 bg-clip-text text-transparent">
-              Marquinhos OS
+              Marquinhos
             </span>
           </h1>
           <p className="text-lg leading-relaxed text-slate-300 mb-8 text-center max-w-lg">
@@ -85,7 +85,7 @@ export const Login: React.FC = () => {
             <div className="w-20 h-20 bg-gradient-to-br from-red-500 via-red-500 to-red-500 rounded-lg flex items-center justify-center mx-auto mb-4 shadow-xl shadow-red-500/30">
               <span className="text-white text-3xl font-bold">M</span>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">Marquinhos OS</h1>
+            <h1 className="text-2xl font-bold text-white mb-1">Marquinhos</h1>
             <p className="text-slate-400 text-sm">Sistema Inteligente de Gestao</p>
           </div>
 
@@ -154,7 +154,7 @@ export const Login: React.FC = () => {
           </div>
 
           <p className="text-center text-slate-500 text-sm mt-8">
-            (c) 2026 Marquinhos OS - Todos os direitos reservados
+            (c) 2026 Marquinhos - Todos os direitos reservados
           </p>
         </div>
       </div>
