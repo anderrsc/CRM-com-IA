@@ -447,6 +447,8 @@ export const Orcamentos: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-fadeIn">
+      {!showNewModal && (
+        <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
@@ -610,14 +612,23 @@ export const Orcamentos: React.FC = () => {
           ))
         )}
       </div>
+        </>
+      )}
 
-      {/* New Budget Modal */}
-      <Modal
-        isOpen={showNewModal}
-        onClose={() => setShowNewModal(false)}
-        title={`Novo Orcamento de ${quoteTypeConfig[formData.quoteType].label}`}
-        size="full"
-      >
+      {showNewModal && (
+        <div className="space-y-5">
+          <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Novo Orcamento de {quoteTypeConfig[formData.quoteType].label}
+              </h2>
+              <p className="text-sm text-gray-500">{quoteTypeConfig[formData.quoteType].description}</p>
+            </div>
+            <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
+              Voltar para orcamentos
+            </Button>
+          </div>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {(['calhas', 'esquadrias'] as QuoteType[]).map((type) => (
@@ -1025,7 +1036,8 @@ export const Orcamentos: React.FC = () => {
             </Button>
           </div>
         </form>
-      </Modal>
+        </div>
+      )}
 
       {/* Preview Modal */}
       <Modal
