@@ -53,14 +53,14 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed bottom-0 right-0 top-0 left-[var(--sidebar-offset,0rem)] z-50 overflow-y-auto bg-white max-md:left-0">
-      <div className="min-h-screen">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+      <div className="min-h-screen w-full">
         <div className={cn(
           'relative min-h-screen w-full bg-white animate-fadeIn',
           sizes[size]
         )}>
           {(title || showClose) && (
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-6">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 bg-white/95 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
               {title && (
                 <h2 className="text-xl font-bold text-gray-900">{title}</h2>
               )}
@@ -75,7 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
             </div>
           )}
 
-          <div className="px-4 py-5 sm:px-6 lg:px-8">
+          <div className="w-full px-4 py-5 sm:px-6 lg:px-8">
             {children}
           </div>
         </div>
