@@ -68,37 +68,6 @@ Abra: `http://127.0.0.1:5173`
 Para persistencia real de dados, configure as credenciais do Supabase no `.env`.
 Sem Supabase, o app roda com fallback local/mock para demonstracao.
 
-## Deploy no Vercel
-
-1. Crie um projeto no Supabase.
-2. Execute a migration:
-
-```text
-supabase/migrations/20260606133000_initial_schema.sql
-```
-
-3. No Vercel, configure as variaveis de ambiente:
-
-| Variavel | Valor |
-|---|---|
-| `SUPABASE_URL` | URL do projeto Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | service role key do Supabase |
-| `OPENAI_API_KEY` | chave OpenAI, opcional |
-| `OPENAI_MODEL` | `gpt-4o-mini` |
-| `WHATSAPP_GRAPH_VERSION` | `v23.0` |
-| `WHATSAPP_PHONE_NUMBER_ID` | phone number ID, opcional |
-| `WHATSAPP_TOKEN` | token WhatsApp, opcional |
-| `WHATSAPP_VERIFY_TOKEN` | token secreto do webhook |
-| `WHATSAPP_AUTO_REPLY` | `false` |
-
-Nao configure `VITE_API_BASE_URL` no Vercel. Em producao, o frontend usa `/api` no proprio dominio.
-
-Build settings:
-
-- Build Command: `npm run build`
-- Output Directory: `dist`
-- Framework: Vite
-
 ## Estrutura de dados
 
 Os cadastros sao salvos em `app_records` no Supabase por colecao:
