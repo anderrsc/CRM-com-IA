@@ -106,10 +106,10 @@ export const Orcamentos: React.FC = () => {
     { value: 'Pingadeira de Fechamento', label: 'Pingadeira de fechamento' },
     { value: 'Linha de Acessorios', label: 'Linha de acessorios' },
     { value: 'Produto Avulso', label: 'Produto avulso' },
-    { value: 'Manutencao', label: 'Instalacao - manutencao' },
-    { value: 'Mao de Obra', label: 'Instalacao - mao de obra' },
-    { value: 'Materiais de Pintura', label: 'Instalacao - materiais para pintura' },
-    { value: 'Remocao e Reinstalacao de Telhas', label: 'Instalacao - remocao e reinstalacao de telhas' },
+    { value: 'Mao de Obra Manutencao', label: 'MÃO DE OBRA - MANUTENÇÃO' },
+    { value: 'Mao de Obra Instalacao', label: 'MÃO DE OBRA - INSTALAÇÃO' },
+    { value: 'Mao de Obra Pintura', label: 'MÃO DE OBRA - PINTURA' },
+    { value: 'Mao de Obra Remocao Telhas', label: 'MÃO DE OBRA - REMOÇÃO E REINSTALAÇÃO DE TELHAS' },
   ];
   const frameProductOptions = [
     { value: 'Janela', label: 'Janela' },
@@ -152,10 +152,10 @@ export const Orcamentos: React.FC = () => {
     'Pingadeira de Fechamento': 'PINGADEIRA DE FECHAMENTO',
     'Linha de Acessorios': 'LINHA DE ACESSORIOS',
     'Produto Avulso': 'PRODUTO',
-    'Manutencao': 'MANUTENCAO',
-    'Mao de Obra': 'MAO DE OBRA',
-    'Materiais de Pintura': 'MATERIAIS NECESSARIOS PARA PINTURA',
-    'Remocao e Reinstalacao de Telhas': 'MAO DE OBRA PARA REMOCAO E REINSTALACAO DE TELHAS',
+    'Mao de Obra Manutencao': 'MÃO DE OBRA PARA MANUTENÇÃO',
+    'Mao de Obra Instalacao': 'MÃO DE OBRA PARA INSTALAÇÃO',
+    'Mao de Obra Pintura': 'MÃO DE OBRA PARA PINTURA',
+    'Mao de Obra Remocao Telhas': 'MÃO DE OBRA PARA REMOÇÃO E REINSTALAÇÃO DE TELHAS',
   };
 
   const buildGutterItemName = (product: string, thickness: string, cut: string, color: string) => {
