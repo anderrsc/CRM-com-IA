@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Marquinhos OS CRM
 
 Sistema CRM completo para esquadrias, alumínio, vidros e calhas.
@@ -110,4 +109,3 @@ Token de verificação: (mesmo valor de WHATSAPP_VERIFY_TOKEN)
 | Instalação | Gerenciamento de instalações |
 | Base de Conhecimento | Catálogo de produtos e serviços |
 | Configurações | Assinatura, integrações e dados da empresa |
-
