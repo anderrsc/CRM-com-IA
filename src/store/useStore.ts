@@ -132,12 +132,18 @@ export const useStore = create<AppState>()(
       currentUser: null,
       isAuthenticated: false,
       login: async (email: string, password: string) => {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const user = mockUsers.find(u => u.email === email);
-        if (user && password === '123456') {
-          set({ currentUser: user, isAuthenticated: true });
+        try {
+          const { user } = await api.login(email, password);
+          set({ currentUser: user, isAuthenticated: true, users: [user] });
           return true;
+        } catch (error) {
+          console.warn('Login via banco indisponivel, tentando modo demonstracao', error);
+          await new Promise(resolve => setTimeout(resolve, 300));
+          const user = mockUsers.find(u => u.email === email);
+          if (user && password === '123456') {
+            set({ currentUser: user, isAuthenticated: true });
+            return true;
+          }
         }
         return false;
       },

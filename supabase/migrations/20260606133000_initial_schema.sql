@@ -10,10 +10,11 @@ create extension if not exists "pgcrypto";
 -- ============================================================
 
 create table if not exists public.app_users (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   name text not null,
   email text not null unique,
   role text not null check (role in ('admin', 'vendedor', 'producao', 'instalador')),
+  password_hash text not null,
   avatar text,
   phone text,
   active boolean not null default true,
@@ -21,7 +22,7 @@ create table if not exists public.app_users (
 );
 
 create table if not exists public.leads (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   name text not null,
   phone text not null,
   email text,
@@ -37,7 +38,7 @@ create table if not exists public.leads (
   availability text,
   observations text,
   ai_summary text,
-  assigned_to uuid references public.app_users(id) on delete set null,
+  assigned_to text,
   attachments jsonb not null default '[]'::jsonb,
   messages jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
@@ -45,8 +46,8 @@ create table if not exists public.leads (
 );
 
 create table if not exists public.visits (
-  id uuid primary key default gen_random_uuid(),
-  lead_id uuid references public.leads(id) on delete cascade,
+  id text primary key,
+  lead_id text,
   lead_name text not null,
   phone text not null default '',
   address text not null default '',
@@ -54,7 +55,7 @@ create table if not exists public.visits (
   visit_date date not null,
   visit_time text not null,
   observations text,
-  assigned_to uuid references public.app_users(id) on delete set null,
+  assigned_to text,
   status text not null default 'agendada' check (status in ('agendada', 'realizada', 'cancelada', 'reagendada')),
   photos jsonb not null default '[]'::jsonb,
   notes text,
@@ -62,9 +63,9 @@ create table if not exists public.visits (
 );
 
 create table if not exists public.measurement_sheets (
-  id uuid primary key default gen_random_uuid(),
-  visit_id uuid references public.visits(id) on delete cascade,
-  lead_id uuid references public.leads(id) on delete cascade,
+  id text primary key,
+  visit_id text,
+  lead_id text,
   lead_name text not null,
   service text not null default '',
   lines jsonb not null default '[]'::jsonb,
@@ -74,8 +75,8 @@ create table if not exists public.measurement_sheets (
 );
 
 create table if not exists public.budgets (
-  id uuid primary key default gen_random_uuid(),
-  lead_id uuid references public.leads(id) on delete cascade,
+  id text primary key,
+  lead_id text,
   lead_name text not null,
   items jsonb not null default '[]'::jsonb,
   labor_cost numeric(12,2) not null default 0,
@@ -94,9 +95,9 @@ create table if not exists public.budgets (
 );
 
 create table if not exists public.productions (
-  id uuid primary key default gen_random_uuid(),
-  budget_id uuid references public.budgets(id) on delete set null,
-  lead_id uuid references public.leads(id) on delete cascade,
+  id text primary key,
+  budget_id text,
+  lead_id text,
   lead_name text not null,
   items jsonb not null default '[]'::jsonb,
   current_stage text not null default 'corte' check (current_stage in ('corte', 'montagem', 'vidro', 'pintura', 'embalagem', 'finalizado')),
@@ -110,9 +111,9 @@ create table if not exists public.productions (
 );
 
 create table if not exists public.installations (
-  id uuid primary key default gen_random_uuid(),
-  production_id uuid references public.productions(id) on delete cascade,
-  lead_id uuid references public.leads(id) on delete cascade,
+  id text primary key,
+  production_id text,
+  lead_id text,
   lead_name text not null,
   address text not null default '',
   installation_date date not null,
@@ -129,7 +130,7 @@ create table if not exists public.installations (
 );
 
 create table if not exists public.knowledge_items (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   category text not null check (category in ('linhas', 'vidros', 'calhas', 'ferragens', 'outros')),
   name text not null,
   description text not null,
@@ -142,7 +143,7 @@ create table if not exists public.knowledge_items (
 );
 
 create table if not exists public.subscriptions (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   customer_name text not null,
   customer_document text not null,
   customer_email text not null,
@@ -161,7 +162,7 @@ create table if not exists public.subscriptions (
 );
 
 create table if not exists public.notifications (
-  id uuid primary key default gen_random_uuid(),
+  id text primary key,
   type text not null check (type in ('info', 'success', 'warning', 'error')),
   title text not null,
   message text not null,
@@ -343,23 +344,23 @@ create policy "service_role_all_notifications"
 -- DADOS INICIAIS
 -- ============================================================
 
-insert into public.app_users (id, name, email, role, phone, active, created_at)
+insert into public.app_users (id, name, email, role, password_hash, phone, active, created_at)
 values
-  ('00000000-0000-0000-0000-000000000001', 'Marcos Silva', 'admin@marquinhosos.com', 'admin', '(44) 99999-0001', true, '2024-01-01T00:00:00Z'),
-  ('00000000-0000-0000-0000-000000000002', 'Ana Santos', 'vendedor@marquinhosos.com', 'vendedor', '(44) 99999-0002', true, '2024-01-15T00:00:00Z'),
-  ('00000000-0000-0000-0000-000000000003', 'Carlos Oliveira', 'producao@marquinhosos.com', 'producao', '(44) 99999-0003', true, '2024-02-01T00:00:00Z'),
-  ('00000000-0000-0000-0000-000000000004', 'Roberto Lima', 'instalador@marquinhosos.com', 'instalador', '(44) 99999-0004', true, '2024-02-15T00:00:00Z')
+  ('1', 'Marcos Silva', 'admin@marquinhosos.com', 'admin', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0001', true, '2024-01-01T00:00:00Z'),
+  ('2', 'Ana Santos', 'vendedor@marquinhosos.com', 'vendedor', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0002', true, '2024-01-15T00:00:00Z'),
+  ('3', 'Carlos Oliveira', 'producao@marquinhosos.com', 'producao', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0003', true, '2024-02-01T00:00:00Z'),
+  ('4', 'Roberto Lima', 'instalador@marquinhosos.com', 'instalador', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0004', true, '2024-02-15T00:00:00Z')
 on conflict (id) do nothing;
 
 insert into public.subscriptions (
-  customer_name, customer_document, customer_email,
+  id, customer_name, customer_document, customer_email,
   plan, status, amount, billing_cycle, max_users,
   due_day, next_due_date, payment_method, notes
 )
 values (
-  'Marquinhos OS', '00.000.000/0001-00', 'financeiro@marquinhosos.com',
+  'main', 'Marquinhos OS', '00.000.000/0001-00', 'financeiro@marquinhosos.com',
   'professional', 'trial', 297, 'monthly', 10,
   10, current_date + interval '7 days', 'pix',
   'Assinatura em periodo de implantacao.'
 )
-on conflict do nothing;
+on conflict (id) do nothing;

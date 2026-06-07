@@ -17,6 +17,7 @@ import { Instalacao } from './pages/Instalacao';
 import { Conhecimento } from './pages/Conhecimento';
 import { cn } from './utils/cn';
 import { copyText, downloadTextFile, formatCurrency } from './utils/actions';
+import { api, ApiStatus } from './services/api';
 import { Badge } from './components/ui/Badge';
 import { Button } from './components/ui/Button';
 import { Input, Select, TextArea } from './components/ui/Input';
@@ -162,6 +163,11 @@ const App: React.FC = () => {
 // Settings Page Component
 const SettingsPage: React.FC = () => {
   const { subscription, updateSubscription, users } = useStore();
+  const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
+
+  useEffect(() => {
+    api.health().then(setApiStatus).catch(() => setApiStatus(null));
+  }, []);
 
   const toInputDate = (value: Date | string) => {
     const date = new Date(value);
@@ -234,13 +240,19 @@ const SettingsPage: React.FC = () => {
     toast.success('Cobranca gerada em arquivo');
   };
 
+  const integrationStatus = (enabled?: boolean) => ({
+    status: enabled ? 'Conectado' : 'Pendente',
+    statusColor: enabled ? 'bg-green-500' : 'bg-amber-500',
+  });
+
   const integrations = [
-    { name: 'WhatsApp Business', icon: MessageSquare, status: 'Conectado', statusColor: 'bg-red-500' },
-    { name: 'Instagram', icon: Globe, status: 'Conectado', statusColor: 'bg-red-500' },
-    { name: 'Google Agenda', icon: Calendar, status: 'Conectado', statusColor: 'bg-red-500' },
-    { name: 'Google Maps', icon: Map, status: 'Configurado', statusColor: 'bg-red-500' },
-    { name: 'OpenAI GPT-4', icon: Bot, status: 'Ativo', statusColor: 'bg-red-500' },
-    { name: 'Impressora de Rede', icon: Printer, status: 'Conectada', statusColor: 'bg-red-500' },
+    { name: 'Supabase', icon: Shield, ...integrationStatus(apiStatus?.supabaseConfigured) },
+    { name: 'WhatsApp Business', icon: MessageSquare, ...integrationStatus(apiStatus?.whatsappConfigured) },
+    { name: 'OpenAI', icon: Bot, ...integrationStatus(apiStatus?.openAiConfigured) },
+    { name: 'Instagram', icon: Globe, status: 'Nao configurado', statusColor: 'bg-gray-400' },
+    { name: 'Google Agenda', icon: Calendar, status: 'Nao configurado', statusColor: 'bg-gray-400' },
+    { name: 'Google Maps', icon: Map, status: 'Nao configurado', statusColor: 'bg-gray-400' },
+    { name: 'Impressora de Rede', icon: Printer, status: 'Local', statusColor: 'bg-gray-400' },
   ];
 
   return (
@@ -540,8 +552,8 @@ const SettingsPage: React.FC = () => {
           {[
             { label: 'Versão', value: '1.0.0' },
             { label: 'Atualização', value: 'Março 2024' },
-            { label: 'Banco de dados', value: 'PostgreSQL' },
-            { label: 'Status', value: 'Online', valueColor: 'text-red-600' },
+            { label: 'Banco de dados', value: apiStatus?.supabaseConfigured ? 'Supabase' : 'Demo local' },
+            { label: 'Status', value: apiStatus?.ok ? 'Online' : 'Offline', valueColor: apiStatus?.ok ? 'text-green-600' : 'text-red-600' },
           ].map((item) => (
             <div key={item.label} className="text-center p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-500 mb-1">{item.label}</p>
