@@ -12,6 +12,7 @@ import { Funil } from './pages/Funil';
 import { Agenda } from './pages/Agenda';
 import { Visitas } from './pages/Visitas';
 import { Orcamentos } from './pages/Orcamentos';
+import { TabelaCalhas } from './pages/TabelaCalhas';
 import { Compras } from './pages/Compras';
 import { Producao } from './pages/Producao';
 import { Instalacao } from './pages/Instalacao';
@@ -57,6 +58,7 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   agenda: { title: 'Agenda', subtitle: 'Visitas e compromissos' },
   visitas: { title: 'Fichas de Visita', subtitle: 'Gerar e imprimir fichas' },
   orcamentos: { title: 'Orçamentos', subtitle: 'Crie e envie orçamentos' },
+  'tabela-calhas': { title: 'Tabela de Calhas', subtitle: 'Valores por largura, espessura e metro' },
   compras: { title: 'Compras', subtitle: 'Materiais, fornecedores e recebimentos' },
   producao: { title: 'Produção', subtitle: 'Acompanhe a produção' },
   instalacao: { title: 'Instalação', subtitle: 'Gerenciar instalações' },
@@ -104,6 +106,8 @@ const App: React.FC = () => {
         return <Visitas />;
       case 'orcamentos':
         return <Orcamentos />;
+      case 'tabela-calhas':
+        return <TabelaCalhas />;
       case 'compras':
         return <Compras />;
       case 'producao':

@@ -80,6 +80,7 @@ create table if not exists public.budgets (
   id text primary key,
   lead_id text,
   lead_name text not null,
+  quote_type text default 'calhas' check (quote_type in ('calhas', 'esquadrias')),
   items jsonb not null default '[]'::jsonb,
   labor_cost numeric(12,2) not null default 0,
   travel_cost numeric(12,2) not null default 0,

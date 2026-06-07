@@ -206,6 +206,7 @@ export interface Budget {
   id: string;
   leadId: string;
   leadName: string;
+  quoteType?: 'calhas' | 'esquadrias';
   items: BudgetItem[];
   laborCost: number;
   travelCost: number;
