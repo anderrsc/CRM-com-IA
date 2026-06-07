@@ -21,7 +21,7 @@ import { Input, Select, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
 import { useStore } from '../store/useStore';
-import { Budget, BudgetItem } from '../types';
+import { Budget, BudgetItem, QuotePriceItem } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
@@ -29,7 +29,22 @@ import toast from 'react-hot-toast';
 import { buildBudgetText, copyText, downloadTextFile, openWhatsApp } from '../utils/actions';
 
 export const Orcamentos: React.FC = () => {
-  const { budgets, leads, productions, addBudget, updateBudget, addProduction, updateLeadStatus, addNotification } = useStore();
+  const {
+    budgets,
+    leads,
+    productions,
+    quotePriceItems,
+    quoteSettings,
+    addBudget,
+    updateBudget,
+    addProduction,
+    updateLeadStatus,
+    addNotification,
+    addQuotePriceItem,
+    updateQuotePriceItem,
+    deleteQuotePriceItem,
+    updateQuoteSettings,
+  } = useStore();
   const [showNewModal, setShowNewModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
@@ -48,11 +63,104 @@ export const Orcamentos: React.FC = () => {
   });
 
   const [newItem, setNewItem] = useState({
+    priceMode: 'saved' as 'saved' | 'manual',
+    priceItemId: '',
+    category: 'calha' as BudgetItem['category'],
+    product: 'Calha',
+    thickness: '0.50',
+    cut: '300',
+    color: 'Natural',
     description: '',
     quantity: 1,
-    unit: 'un',
+    unit: 'm',
     unitPrice: 0,
   });
+
+  const [priceForm, setPriceForm] = useState({
+    name: 'Calha',
+    category: 'calha' as QuotePriceItem['category'],
+    thickness: '0.50',
+    cut: '300',
+    color: 'Natural',
+    unit: 'm',
+    unitPrice: 0,
+  });
+
+  const thicknessOptions = ['0.43', '0.50', '0.60', '0.80'];
+  const cutOptions = ['150', '200', '250', '300', '330', '350', '400', '500', '600', '700', '800', '900', '1000', '1200'];
+  const colorOptions = ['Natural', 'Branco', 'Preto', 'Bronze', 'Grafite'];
+  const productOptions = [
+    { value: 'Calha', label: 'Calha' },
+    { value: 'Rufo', label: 'Rufo' },
+    { value: 'Rufo com Pingadeira', label: 'Rufo com Pingadeira' },
+    { value: 'Pingadeira', label: 'Pingadeira' },
+    { value: 'Condutor', label: 'Condutor' },
+  ];
+
+  const buildMetalSheetDescription = () => {
+    return `${newItem.product} Aluminio ${newItem.thickness}mm C/${newItem.cut} ${newItem.color}`;
+  };
+
+  const buildPriceItemName = () => {
+    return `${priceForm.name} Aluminio ${priceForm.thickness}mm C/${priceForm.cut} ${priceForm.color}`;
+  };
+
+  const categoryFromProduct = (product: string): BudgetItem['category'] => {
+    const normalized = product.toLowerCase();
+    if (normalized.includes('rufo')) return 'rufo';
+    if (normalized.includes('pingadeira')) return 'pingadeira';
+    if (normalized.includes('instal')) return 'instalacao';
+    if (normalized.includes('calha') || normalized.includes('condutor')) return 'calha';
+    return 'outro';
+  };
+
+  const activePriceItems = quotePriceItems.filter(item => item.active);
+
+  const handleSelectSavedPrice = (id: string) => {
+    const priceItem = quotePriceItems.find(item => item.id === id);
+    if (!priceItem) {
+      setNewItem({ ...newItem, priceItemId: id });
+      return;
+    }
+
+    setNewItem({
+      ...newItem,
+      priceMode: 'saved',
+      priceItemId: id,
+      category: priceItem.category,
+      product: priceItem.name.split(' Aluminio ')[0] || priceItem.name,
+      thickness: priceItem.thickness || newItem.thickness,
+      cut: priceItem.cut || newItem.cut,
+      color: priceItem.color || newItem.color,
+      description: priceItem.name,
+      unit: priceItem.unit,
+      unitPrice: priceItem.unitPrice,
+    });
+  };
+
+  const handleSavePriceItem = () => {
+    if (!priceForm.name.trim() || priceForm.unitPrice <= 0) {
+      toast.error('Preencha produto e valor unitario');
+      return;
+    }
+
+    const item: QuotePriceItem = {
+      id: uuidv4(),
+      name: buildPriceItemName(),
+      category: categoryFromProduct(priceForm.name),
+      thickness: priceForm.thickness,
+      cut: priceForm.cut,
+      color: priceForm.color,
+      unit: priceForm.unit,
+      unitPrice: priceForm.unitPrice,
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    addQuotePriceItem(item);
+    toast.success('Preco salvo na tabela');
+  };
 
   const calculateTotals = () => {
     const itemsTotal = formData.items.reduce((sum, item) => sum + item.total, 0);
@@ -69,12 +177,33 @@ export const Orcamentos: React.FC = () => {
 
     const item: BudgetItem = {
       id: uuidv4(),
-      ...newItem,
+      description: newItem.description || buildMetalSheetDescription(),
+      quantity: newItem.quantity,
+      unit: newItem.unit,
+      unitPrice: newItem.unitPrice,
+      category: categoryFromProduct(newItem.product),
+      thickness: newItem.thickness,
+      cut: newItem.cut,
+      color: newItem.color,
+      priceSource: newItem.priceMode,
+      priceItemId: newItem.priceItemId || undefined,
       total: newItem.quantity * newItem.unitPrice,
     };
 
     setFormData({ ...formData, items: [...formData.items, item] });
-    setNewItem({ description: '', quantity: 1, unit: 'un', unitPrice: 0 });
+    setNewItem({
+      category: 'calha',
+      priceMode: 'saved',
+      priceItemId: '',
+      product: 'Calha',
+      thickness: '0.50',
+      cut: '300',
+      color: 'Natural',
+      description: '',
+      quantity: 1,
+      unit: 'm',
+      unitPrice: 0,
+    });
   };
 
   const handleRemoveItem = (id: string) => {
@@ -196,7 +325,7 @@ export const Orcamentos: React.FC = () => {
       return;
     }
 
-    const ok = openWhatsApp(lead.phone, buildBudgetText(budget));
+    const ok = openWhatsApp(lead.phone, buildBudgetText(budget, quoteSettings));
     if (!ok) toast.error('Telefone inválido para WhatsApp');
   };
 
@@ -208,17 +337,17 @@ export const Orcamentos: React.FC = () => {
     }
 
     const subject = encodeURIComponent(`Orçamento Marquinhos - ${budget.leadName}`);
-    const body = encodeURIComponent(buildBudgetText(budget));
+    const body = encodeURIComponent(buildBudgetText(budget, quoteSettings));
     window.location.href = `mailto:${lead.email}?subject=${subject}&body=${body}`;
   };
 
   const handleDownloadBudget = (budget: Budget) => {
-    downloadTextFile(`orcamento-${budget.id.slice(0, 8)}.txt`, buildBudgetText(budget));
+    downloadTextFile(`orcamento-${budget.id.slice(0, 8)}.txt`, buildBudgetText(budget, quoteSettings));
     toast.success('Arquivo do orçamento baixado');
   };
 
   const handleCopyBudget = async (budget: Budget) => {
-    await copyText(buildBudgetText(budget));
+    await copyText(buildBudgetText(budget, quoteSettings));
     toast.success('Orçamento copiado');
   };
 
@@ -392,6 +521,122 @@ export const Orcamentos: React.FC = () => {
             required
           />
 
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card padding="sm">
+              <h4 className="font-medium text-gray-900 mb-3">Emissao do orcamento</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label="Nome da empresa"
+                  value={quoteSettings.companyName}
+                  onChange={(e) => updateQuoteSettings({ companyName: e.target.value })}
+                />
+                <Input
+                  label="Documento"
+                  value={quoteSettings.document}
+                  onChange={(e) => updateQuoteSettings({ document: e.target.value })}
+                />
+                <Input
+                  label="Telefone"
+                  value={quoteSettings.phone || ''}
+                  onChange={(e) => updateQuoteSettings({ phone: e.target.value })}
+                />
+                <Input
+                  label="Chave PIX"
+                  value={quoteSettings.pixKey || ''}
+                  onChange={(e) => updateQuoteSettings({ pixKey: e.target.value })}
+                />
+                <div className="sm:col-span-2">
+                  <TextArea
+                    label="Texto do cabecalho"
+                    rows={2}
+                    value={quoteSettings.headerText}
+                    onChange={(e) => updateQuoteSettings({ headerText: e.target.value })}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <TextArea
+                    label="Texto final"
+                    rows={2}
+                    value={quoteSettings.footerText}
+                    onChange={(e) => updateQuoteSettings({ footerText: e.target.value })}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <Card padding="sm">
+              <h4 className="font-medium text-gray-900 mb-3">Tabela de precos</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  label="Produto"
+                  options={productOptions}
+                  value={priceForm.name}
+                  onChange={(e) => setPriceForm({ ...priceForm, name: e.target.value })}
+                />
+                <Select
+                  label="Espessura"
+                  options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
+                  value={priceForm.thickness}
+                  onChange={(e) => setPriceForm({ ...priceForm, thickness: e.target.value })}
+                />
+                <Select
+                  label="Corte"
+                  options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
+                  value={priceForm.cut}
+                  onChange={(e) => setPriceForm({ ...priceForm, cut: e.target.value })}
+                />
+                <Select
+                  label="Cor"
+                  options={colorOptions.map(value => ({ value, label: value }))}
+                  value={priceForm.color}
+                  onChange={(e) => setPriceForm({ ...priceForm, color: e.target.value })}
+                />
+                <Select
+                  label="Unidade"
+                  options={[
+                    { value: 'm', label: 'm' },
+                    { value: 'un', label: 'un' },
+                    { value: 'kit', label: 'kit' },
+                  ]}
+                  value={priceForm.unit}
+                  onChange={(e) => setPriceForm({ ...priceForm, unit: e.target.value })}
+                />
+                <Input
+                  label="Valor unitario"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={priceForm.unitPrice || ''}
+                  onChange={(e) => setPriceForm({ ...priceForm, unitPrice: Number(e.target.value) })}
+                />
+                <div className="col-span-2">
+                  <Button type="button" fullWidth onClick={handleSavePriceItem}>
+                    Salvar preco na tabela
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 max-h-32 space-y-2 overflow-auto">
+                {quotePriceItems.length === 0 ? (
+                  <p className="text-sm text-gray-500">Nenhum preco salvo ainda.</p>
+                ) : (
+                  quotePriceItems.slice(0, 6).map((item) => (
+                    <div key={item.id} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
+                      <span className="truncate">{item.name} - {formatCurrency(item.unitPrice)}/{item.unit}</span>
+                      <div className="flex gap-1">
+                        <button type="button" className="text-gray-500 hover:text-red-700" onClick={() => updateQuotePriceItem(item.id, { active: !item.active })}>
+                          {item.active ? 'Pausar' : 'Ativar'}
+                        </button>
+                        <button type="button" className="text-red-600 hover:text-red-800" onClick={() => deleteQuotePriceItem(item.id)}>
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+
           {/* Items Section */}
           <div>
             <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
@@ -401,9 +646,56 @@ export const Orcamentos: React.FC = () => {
 
             {/* Add Item Form */}
             <div className="grid grid-cols-12 gap-3 mb-4 p-4 bg-gray-50 rounded-lg">
-              <div className="col-span-12 sm:col-span-5">
+              <div className="col-span-12 grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3">
+                <Select
+                  options={[
+                    { value: 'saved', label: 'Usar tabela' },
+                    { value: 'manual', label: 'Valor manual' },
+                  ]}
+                  value={newItem.priceMode}
+                  onChange={(e) => setNewItem({ ...newItem, priceMode: e.target.value as 'saved' | 'manual', priceItemId: '' })}
+                />
+                <Select
+                  options={[
+                    { value: '', label: activePriceItems.length ? 'Escolha um preco salvo' : 'Nenhum preco salvo' },
+                    ...activePriceItems.map(item => ({ value: item.id, label: `${item.name} - ${formatCurrency(item.unitPrice)}/${item.unit}` })),
+                  ]}
+                  value={newItem.priceItemId}
+                  onChange={(e) => handleSelectSavedPrice(e.target.value)}
+                  disabled={newItem.priceMode !== 'saved' || activePriceItems.length === 0}
+                />
+              </div>
+              <div className="col-span-12 sm:col-span-3">
+                <Select
+                  options={productOptions}
+                  value={newItem.product}
+                  onChange={(e) => setNewItem({ ...newItem, product: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-2">
+                <Select
+                  options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
+                  value={newItem.thickness}
+                  onChange={(e) => setNewItem({ ...newItem, thickness: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-2">
+                <Select
+                  options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
+                  value={newItem.cut}
+                  onChange={(e) => setNewItem({ ...newItem, cut: e.target.value })}
+                />
+              </div>
+              <div className="col-span-4 sm:col-span-2">
+                <Select
+                  options={colorOptions.map(value => ({ value, label: value }))}
+                  value={newItem.color}
+                  onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
+                />
+              </div>
+              <div className="col-span-12 sm:col-span-3">
                 <Input
-                  placeholder="Descrição do item"
+                  placeholder={buildMetalSheetDescription()}
                   value={newItem.description}
                   onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                 />
@@ -420,9 +712,8 @@ export const Orcamentos: React.FC = () => {
               <div className="col-span-4 sm:col-span-2">
                 <Select
                   options={[
-                    { value: 'un', label: 'un' },
                     { value: 'm', label: 'm' },
-                    { value: 'm²', label: 'm²' },
+                    { value: 'un', label: 'un' },
                     { value: 'kit', label: 'kit' },
                   ]}
                   value={newItem.unit}
@@ -439,13 +730,13 @@ export const Orcamentos: React.FC = () => {
                   step={0.01}
                 />
               </div>
-              <div className="col-span-12 sm:col-span-1 flex items-end">
+              <div className="col-span-12 sm:col-span-6 flex items-end">
                 <Button type="button" onClick={handleAddItem} size="sm" className="w-full">
                   <Plus size={18} />
+                  Adicionar item de calha
                 </Button>
               </div>
             </div>
-
             {/* Items List */}
             {formData.items.length > 0 && (
               <div className="border rounded-lg overflow-hidden">
@@ -611,8 +902,9 @@ export const Orcamentos: React.FC = () => {
                   M
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold">Marquinhos</h1>
-                  <p className="text-sm text-gray-500">CNPJ: 00.000.000/0001-00</p>
+                  <h1 className="text-xl font-bold">{quoteSettings.companyName}</h1>
+                  <p className="text-sm text-gray-500">{quoteSettings.document}</p>
+                  {quoteSettings.phone && <p className="text-sm text-gray-500">{quoteSettings.phone}</p>}
                 </div>
               </div>
               <div className="text-right">
@@ -620,6 +912,12 @@ export const Orcamentos: React.FC = () => {
                 <p className="text-sm text-gray-500">#{selectedBudget.id.slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
+
+            {quoteSettings.headerText && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                {quoteSettings.headerText}
+              </div>
+            )}
 
             {/* Client */}
             <div className="bg-gray-50 p-4 rounded-lg">
@@ -684,8 +982,12 @@ export const Orcamentos: React.FC = () => {
             <div className="text-sm text-gray-600">
               <p><strong>Validade:</strong> {selectedBudget.validity} dias</p>
               <p><strong>Pagamento:</strong> {selectedBudget.paymentConditions}</p>
+              {quoteSettings.pixKey && <p><strong>PIX:</strong> {quoteSettings.pixKey}</p>}
               {selectedBudget.observations && (
                 <p><strong>Observações:</strong> {selectedBudget.observations}</p>
+              )}
+              {quoteSettings.footerText && (
+                <p className="mt-3 rounded-lg bg-gray-50 p-3">{quoteSettings.footerText}</p>
               )}
             </div>
 

@@ -96,6 +96,34 @@ create table if not exists public.budgets (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.quote_price_items (
+  id text primary key,
+  name text not null,
+  category text not null default 'outro' check (category in ('calha', 'rufo', 'pingadeira', 'esquadria', 'vidro', 'acessorio', 'instalacao', 'outro')),
+  thickness text,
+  cut text,
+  color text,
+  unit text not null default 'un',
+  unit_price numeric(12,2) not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_settings (
+  id text primary key,
+  company_name text not null default 'Marquinhos',
+  document text not null default '',
+  phone text,
+  email text,
+  header_text text not null default '',
+  footer_text text not null default '',
+  pix_key text,
+  default_validity integer not null default 15,
+  default_payment_conditions text not null default '',
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.productions (
   id text primary key,
   budget_id text,
@@ -196,6 +224,8 @@ create index if not exists leads_status_idx on public.leads(status);
 create index if not exists leads_origin_idx on public.leads(origin);
 create index if not exists visits_date_idx on public.visits(visit_date);
 create index if not exists budgets_status_idx on public.budgets(status);
+create index if not exists quote_price_items_lookup_idx on public.quote_price_items(category, thickness, cut, color);
+create index if not exists quote_price_items_active_idx on public.quote_price_items(active);
 create index if not exists productions_stage_idx on public.productions(current_stage);
 create index if not exists installations_date_idx on public.installations(installation_date);
 create index if not exists whatsapp_inbox_timestamp_idx on public.whatsapp_inbox(timestamp desc);
@@ -210,6 +240,8 @@ alter table public.leads enable row level security;
 alter table public.visits enable row level security;
 alter table public.measurement_sheets enable row level security;
 alter table public.budgets enable row level security;
+alter table public.quote_price_items enable row level security;
+alter table public.quote_settings enable row level security;
 alter table public.productions enable row level security;
 alter table public.installations enable row level security;
 alter table public.knowledge_items enable row level security;
@@ -272,6 +304,24 @@ create policy "service_role_all_measurement_sheets"
 drop policy if exists "service_role_all_budgets" on public.budgets;
 create policy "service_role_all_budgets"
   on public.budgets
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+-- quote_price_items
+drop policy if exists "service_role_all_quote_price_items" on public.quote_price_items;
+create policy "service_role_all_quote_price_items"
+  on public.quote_price_items
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+-- quote_settings
+drop policy if exists "service_role_all_quote_settings" on public.quote_settings;
+create policy "service_role_all_quote_settings"
+  on public.quote_settings
   for all
   to service_role
   using (true)
@@ -341,5 +391,24 @@ values (
   'professional', 'trial', 297, 'monthly', 10,
   10, current_date + interval '7 days', 'pix',
   'Assinatura em periodo de implantacao.'
+)
+on conflict (id) do nothing;
+
+insert into public.quote_settings (
+  id, company_name, document, phone, email, header_text, footer_text,
+  pix_key, default_validity, default_payment_conditions, updated_at
+)
+values (
+  'main',
+  'Marquinhos',
+  '00.000.000/0001-00',
+  '(44) 99999-0000',
+  'contato@marquinhos.com',
+  'Orcamento profissional para fornecimento e instalacao.',
+  'Agradecemos a preferencia. Valores sujeitos a conferencia tecnica.',
+  null,
+  15,
+  '50% entrada + 50% na entrega',
+  now()
 )
 on conflict (id) do nothing;

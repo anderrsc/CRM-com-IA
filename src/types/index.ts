@@ -144,6 +144,40 @@ export interface BudgetItem {
   unit: string;
   unitPrice: number;
   total: number;
+  category?: 'calha' | 'rufo' | 'pingadeira' | 'esquadria' | 'vidro' | 'acessorio' | 'instalacao' | 'outro';
+  thickness?: string;
+  cut?: string;
+  color?: string;
+  priceSource?: 'saved' | 'manual';
+  priceItemId?: string;
+}
+
+export interface QuotePriceItem {
+  id: string;
+  name: string;
+  category: BudgetItem['category'];
+  thickness?: string;
+  cut?: string;
+  color?: string;
+  unit: string;
+  unitPrice: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuoteSettings {
+  id: string;
+  companyName: string;
+  document: string;
+  phone?: string;
+  email?: string;
+  headerText: string;
+  footerText: string;
+  pixKey?: string;
+  defaultValidity: number;
+  defaultPaymentConditions: string;
+  updatedAt: Date;
 }
 
 export interface Budget {

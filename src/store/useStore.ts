@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
   User, Lead, Visit, Budget, Production, Installation, MeasurementSheet, Subscription,
-  KnowledgeItem, Notification, LeadStatus 
+  KnowledgeItem, Notification, LeadStatus, QuotePriceItem, QuoteSettings
 } from '../types';
 import { api } from '../services/api';
 
@@ -56,6 +56,12 @@ interface AppState {
   addBudget: (budget: Budget) => void;
   updateBudget: (id: string, updates: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
+  quotePriceItems: QuotePriceItem[];
+  addQuotePriceItem: (item: QuotePriceItem) => void;
+  updateQuotePriceItem: (id: string, updates: Partial<QuotePriceItem>) => void;
+  deleteQuotePriceItem: (id: string) => void;
+  quoteSettings: QuoteSettings;
+  updateQuoteSettings: (updates: Partial<QuoteSettings>) => void;
   
   // Productions
   productions: Production[];
@@ -104,6 +110,8 @@ export const useStore = create<AppState>()(
             subscriptions,
             users,
             notifications,
+            quotePriceItems,
+            quoteSettingsRows,
           ] = await Promise.all([
             api.listData<Lead>('leads'),
             api.listData<Visit>('visits'),
@@ -115,6 +123,8 @@ export const useStore = create<AppState>()(
             api.listData<Subscription & { id: string }>('subscriptions'),
             api.listData<User>('users'),
             api.listData<Notification>('notifications'),
+            api.listData<QuotePriceItem>('quotePriceItems'),
+            api.listData<QuoteSettings>('quoteSettings'),
           ]);
 
           set((state) => ({
@@ -129,6 +139,8 @@ export const useStore = create<AppState>()(
             subscription: subscriptions[0] || state.subscription,
             users,
             notifications,
+            quotePriceItems,
+            quoteSettings: quoteSettingsRows[0] || state.quoteSettings,
           }));
         } catch (error) {
           console.warn('Banco indisponivel, usando dados locais', error);
@@ -255,6 +267,39 @@ export const useStore = create<AppState>()(
       deleteBudget: (id) => set((state) => {
         syncDelete('budgets', id);
         return { budgets: state.budgets.filter(b => b.id !== id) };
+      }),
+      quotePriceItems: [],
+      addQuotePriceItem: (item) => set((state) => {
+        syncSave('quotePriceItems', item);
+        return { quotePriceItems: [item, ...state.quotePriceItems] };
+      }),
+      updateQuotePriceItem: (id, updates) => set((state) => {
+        const quotePriceItems = state.quotePriceItems.map(item => item.id === id ? { ...item, ...updates, updatedAt: new Date() } : item);
+        const updated = quotePriceItems.find(item => item.id === id);
+        if (updated) syncSave('quotePriceItems', updated);
+        return { quotePriceItems };
+      }),
+      deleteQuotePriceItem: (id) => set((state) => {
+        syncDelete('quotePriceItems', id);
+        return { quotePriceItems: state.quotePriceItems.filter(item => item.id !== id) };
+      }),
+      quoteSettings: {
+        id: 'main',
+        companyName: 'Marquinhos',
+        document: '00.000.000/0001-00',
+        phone: '(44) 99999-0000',
+        email: 'contato@marquinhos.com',
+        headerText: 'Orcamento profissional para fornecimento e instalacao.',
+        footerText: 'Agradecemos a preferencia. Valores sujeitos a conferencia tecnica.',
+        pixKey: '',
+        defaultValidity: 15,
+        defaultPaymentConditions: '50% entrada + 50% na entrega',
+        updatedAt: new Date(),
+      },
+      updateQuoteSettings: (updates) => set((state) => {
+        const quoteSettings = { ...state.quoteSettings, ...updates, id: 'main', updatedAt: new Date() };
+        syncSave('quoteSettings', quoteSettings);
+        return { quoteSettings };
       }),
       
       // Productions

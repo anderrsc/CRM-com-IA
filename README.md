@@ -42,6 +42,7 @@ Se o banco ja foi criado antes, execute tambem a migration incremental:
 
 ```text
 supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
+supabase/migrations/20260607103000_quote_pricing_and_emission.sql
 ```
 
 3. No Vercel, configure as variaveis de ambiente:
