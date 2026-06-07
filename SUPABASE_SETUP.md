@@ -1,69 +1,78 @@
-# Configuração do Supabase - Marquinhos OS
+# Configuracao do Supabase - Marquinhos OS
 
 ## 1. Criar o banco de dados
 
-1. Acesse [supabase.com](https://supabase.com) e crie um projeto
-2. Aguarde a inicialização (2-3 minutos)
-3. Vá em **SQL Editor** (menu lateral esquerdo)
-4. Clique em **New query**
-5. Cole o conteúdo de `supabase/migrations/20260606133000_initial_schema.sql`
-6. Clique em **Run** (▶)
+1. Acesse `supabase.com` e crie um projeto.
+2. Aguarde a inicializacao.
+3. Abra **SQL Editor**.
+4. Cole o conteudo de `supabase/migrations/20260606133000_initial_schema.sql`.
+5. Clique em **Run**.
 
-O script cria todas as tabelas, índices, políticas de segurança (RLS) e dados iniciais.
+O script cria tabelas, indices, RLS, policies e dados iniciais.
 
-## 2. Obter as credenciais
+## 2. Tabelas usadas pelo CRM
 
-Em **Settings → API**:
+- `app_users` - usuarios, perfis e senha hash
+- `leads` - clientes e leads
+- `visits` - visitas agendadas
+- `measurement_sheets` - fichas de medicao
+- `budgets` - orcamentos
+- `productions` - ordens de producao
+- `installations` - instalacoes
+- `knowledge_items` - base de conhecimento
+- `subscriptions` - assinatura e cobranca
+- `notifications` - notificacoes
+- `whatsapp_inbox` - mensagens recebidas pelo webhook do WhatsApp
 
-- **Project URL** → `SUPABASE_URL`
-- **service_role** (secret) → `SUPABASE_SERVICE_ROLE_KEY`
+## 3. Login inicial
 
-> ⚠️ A `service_role` key tem acesso total ao banco. Use **somente** no servidor (Vercel), nunca no frontend.
+Usuario inicial:
 
-## 3. Configurar no Vercel
-
-Em **Project Settings → Environment Variables**:
-
+```text
+ADM inicial configurado na migration.
 ```
+
+Dentro da area ADM, crie os demais usuarios, senhas e perfis.
+As senhas ficam salvas como hash PBKDF2 em `app_users.password_hash`.
+
+## 4. Credenciais para o Vercel
+
+Em **Settings > API** no Supabase:
+
+- **Project URL** -> `SUPABASE_URL`
+- **service_role** -> `SUPABASE_SERVICE_ROLE_KEY`
+
+No Vercel, configure:
+
+```text
 SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o-mini
+WHATSAPP_GRAPH_VERSION=v23.0
+WHATSAPP_PHONE_NUMBER_ID=
+WHATSAPP_TOKEN=
+WHATSAPP_VERIFY_TOKEN=marquinhos-webhook-token-2024
+WHATSAPP_AUTO_REPLY=false
 ```
 
-## 4. Como os dados são salvos
+Nao configure `VITE_API_BASE_URL` no Vercel.
 
-O CRM usa a tabela `app_records` como armazenamento flexível (schema-on-write):
+## 5. Verificar
 
-```
-app_records
-  collection  TEXT    -- nome da coleção (leads, visits, etc.)
-  id          TEXT    -- id do registro
-  payload     JSONB   -- dados completos do registro
-  created_at  TIMESTAMPTZ
-  updated_at  TIMESTAMPTZ
-```
+Depois do deploy, abra:
 
-Isso permite salvar qualquer estrutura sem migrações adicionais.
-
-## 5. Tabelas especializadas
-
-Algumas funcionalidades usam tabelas próprias:
-- `whatsapp_inbox` — mensagens recebidas via webhook
-- `app_users` — usuários do sistema (seed inicial inclui 4 usuários)
-- `subscriptions` — dados de assinatura/cobrança
-
-## 6. Verificar se está funcionando
-
-Após o deploy no Vercel, acesse:
-```
+```text
 https://SEU-DOMINIO.vercel.app/api/health
 ```
 
-Deve retornar:
+Resposta esperada com Supabase configurado:
+
 ```json
 {
   "ok": true,
   "supabaseConfigured": true,
-  "openAiConfigured": true,
+  "openAiConfigured": false,
   "whatsappConfigured": false
 }
 ```

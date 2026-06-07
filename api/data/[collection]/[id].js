@@ -1,5 +1,6 @@
 import { methodNotAllowed, requireSupabase, send } from '../../_lib/http.js';
 import { supabaseConfigured, supabaseRequest } from '../../_lib/supabase.js';
+import { deleteRecord, saveRecord } from '../../../shared/records.js';
 
 export default async function handler(req, res) {
   const { collection, id } = req.query;
@@ -14,36 +15,18 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'PUT') {
-      const results = await supabaseRequest(
-        `app_records?on_conflict=collection,id`,
-        {
-          method: 'POST',
-          headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-          body: JSON.stringify({
-            collection,
-            id,
-            payload: req.body,
-            updated_at: new Date().toISOString(),
-          }),
-        }
-      );
-      // supabaseRequest returns null for 204, array otherwise
-      const saved = Array.isArray(results) ? results[0] : results;
-      send(res, 200, saved?.payload ?? req.body);
+      send(res, 200, await saveRecord(supabaseRequest, collection, id, req.body));
       return;
     }
 
     if (req.method === 'DELETE') {
-      await supabaseRequest(
-        `app_records?collection=eq.${encodeURIComponent(collection)}&id=eq.${encodeURIComponent(id)}`,
-        { method: 'DELETE', headers: { Prefer: 'return=minimal' } }
-      );
+      await deleteRecord(supabaseRequest, collection, id);
       send(res, 200, { ok: true });
       return;
     }
 
     methodNotAllowed(res);
   } catch (error) {
-    send(res, 500, { error: error.message });
+    send(res, error.statusCode || 500, { error: error.message });
   }
 }

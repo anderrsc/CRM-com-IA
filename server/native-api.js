@@ -20,6 +20,8 @@ try {
 
 const { supabaseConfigured, supabaseRequest } = await import('./supabase.js');
 const { analyzeCustomerMessage } = await import('./services/openai.js');
+const { authenticateUser } = await import('../shared/auth.js');
+const { deleteRecord, listRecords, saveRecord } = await import('../shared/records.js');
 
 const port = Number(process.env.API_PORT || 8787);
 const dataDir = path.join(__dirname, 'data');
@@ -97,6 +99,16 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && url.pathname === '/api/auth/login') {
+      const body = await readJson(req);
+      if (!supabaseConfigured) {
+        send(res, 503, { error: 'Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env' });
+        return;
+      }
+      send(res, 200, { user: await authenticateUser(supabaseRequest, body.login, body.password) });
+      return;
+    }
+
     const dataMatch = url.pathname.match(/^\/api\/data\/([^/]+)(?:\/([^/]+))?$/);
     if (dataMatch) {
       const collection = decodeURIComponent(dataMatch[1]);
@@ -104,10 +116,7 @@ const server = http.createServer(async (req, res) => {
 
       if (req.method === 'GET') {
         if (supabaseConfigured) {
-          const rows = await supabaseRequest(
-            `app_records?collection=eq.${encodeURIComponent(collection)}&select=id,payload,updated_at&order=updated_at.desc`
-          );
-          send(res, 200, rows.map((row) => row.payload));
+          send(res, 200, await listRecords(supabaseRequest, collection));
         } else {
           send(res, 200, await localList(collection));
         }
@@ -117,17 +126,7 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'PUT' && id) {
         const payload = await readJson(req);
         if (supabaseConfigured) {
-          const [saved] = await supabaseRequest('app_records?on_conflict=collection,id', {
-            method: 'POST',
-            headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-            body: JSON.stringify({
-              collection,
-              id,
-              payload,
-              updated_at: new Date().toISOString(),
-            }),
-          });
-          send(res, 200, saved.payload);
+          send(res, 200, await saveRecord(supabaseRequest, collection, id, payload));
         } else {
           send(res, 200, await localSave(collection, payload));
         }
@@ -136,10 +135,7 @@ const server = http.createServer(async (req, res) => {
 
       if (req.method === 'DELETE' && id) {
         if (supabaseConfigured) {
-          await supabaseRequest(
-            `app_records?collection=eq.${encodeURIComponent(collection)}&id=eq.${encodeURIComponent(id)}`,
-            { method: 'DELETE', headers: { Prefer: 'return=minimal' } }
-          );
+          await deleteRecord(supabaseRequest, collection, id);
         } else {
           await localDelete(collection, id);
         }

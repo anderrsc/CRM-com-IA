@@ -2,11 +2,10 @@
 
 Sistema CRM completo para esquadrias, aluminio, vidros e calhas.
 
-## Login de demonstracao
+## Login inicial ADM
 
 ```text
-admin@marquinhosos.com
-senha: 123456
+Use o login ADM inicial configurado na migration.
 ```
 
 ---
@@ -65,20 +64,21 @@ npm run dev
 
 Abra: `http://127.0.0.1:5173`
 
-Para persistencia real de dados, configure as credenciais do Supabase no `.env`.
-Sem Supabase, o app roda com fallback local/mock para demonstracao.
+Para persistencia real de dados e login por senha, configure as credenciais do Supabase no `.env`.
+O sistema nao carrega dados de teste: os cadastros comecam vazios e sao salvos no banco.
 
 ## Estrutura de dados
 
-Os cadastros sao salvos em `app_records` no Supabase por colecao:
+Os cadastros sao salvos em tabelas reais no Supabase:
 
+- `app_users` - usuarios, perfis e senha hash
 - `leads` - clientes e leads
 - `visits` - visitas agendadas
-- `measurementSheets` - fichas de medicao
+- `measurement_sheets` - fichas de medicao
 - `budgets` - orcamentos
 - `productions` - ordens de producao
 - `installations` - instalacoes
-- `knowledgeBase` - base de conhecimento
+- `knowledge_items` - base de conhecimento
 - `subscriptions` - configuracao de assinatura
 
 Mensagens WhatsApp sao salvas em `whatsapp_inbox`.
