@@ -26,7 +26,7 @@ import { buildVisitText, downloadTextFile, openMap, openWhatsApp } from '../util
 import { v4 as uuidv4 } from 'uuid';
 
 export const Visitas: React.FC = () => {
-  const { visits, measurementSheets, saveMeasurementSheet } = useStore();
+  const { visits, measurementSheets, saveMeasurementSheet, leads, users, currentUser } = useStore();
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [measurementSheet, setMeasurementSheet] = useState<MeasurementSheet | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -117,6 +117,35 @@ export const Visitas: React.FC = () => {
     downloadTextFile(`ficha-visita-${selectedVisit.id.slice(0, 8)}.txt`, `${buildVisitText(selectedVisit)}${measurements}`);
     toast.success('Ficha de visita baixada');
   };
+
+  const formatDateSafe = (value?: Date | string) => {
+    if (!value) return 'A definir';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'A definir';
+    return format(date, 'dd/MM/yyyy', { locale: ptBR });
+  };
+
+  const selectedLead = selectedVisit ? leads.find((lead) => lead.id === selectedVisit.leadId) : null;
+  const measurerName = selectedVisit
+    ? users.find((user) => user.id === selectedVisit.assignedTo)?.name || selectedVisit.assignedTo || currentUser?.name || 'A definir'
+    : 'A definir';
+  const visitKind = selectedVisit && /esquadr|janela|porta|box|vidro/i.test(selectedVisit.service)
+    ? 'ESQUADRIAS'
+    : 'CALHAS';
+  const fullAddress = selectedVisit
+    ? [
+        selectedLead?.address || selectedVisit.address,
+        selectedLead?.neighborhood ? `Bairro ${selectedLead.neighborhood}` : '',
+        selectedLead?.city ? `${selectedLead.city}${selectedLead.state ? ` - ${selectedLead.state}` : ''}` : '',
+        selectedLead?.zipCode ? `CEP ${selectedLead.zipCode}` : '',
+      ].filter(Boolean).join(' | ')
+    : '';
+  const reference = selectedVisit
+    ? selectedLead?.observations || selectedVisit.observations || 'Sem referencia informada'
+    : 'Sem referencia informada';
+  const availability = selectedVisit
+    ? selectedLead?.availability || selectedVisit.time || 'A definir'
+    : 'A definir';
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-fadeIn">
@@ -280,9 +309,75 @@ export const Visitas: React.FC = () => {
               </Card>
             )}
 
-            {/* Printable Visit Card */}
+            {/* Printable Measurement Sheet */}
             <div id="print-area" ref={printRef} className="print:block">
-              <Card className="print:shadow-none print:border-2 print:border-black">
+              <div className="measurement-print-page bg-white rounded-lg border border-gray-200 shadow-sm print:rounded-none print:border-0 print:shadow-none">
+                <section className="measurement-print-header">
+                  <div className="flex items-start justify-between border-b-2 border-red-600 pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-11 w-11 place-items-center rounded-lg bg-gradient-to-br from-red-600 to-red-800 text-xl font-black text-white">
+                        M
+                      </div>
+                      <div>
+                        <h1 className="text-lg font-black leading-tight text-gray-950">Marquinhos Calhas e Esquadrias</h1>
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                          Ficha integrada ao CRM
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-base font-black uppercase text-red-700">Ficha de Medição</h2>
+                      <p className="text-[11px] font-semibold text-gray-500">Nº {selectedVisit.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-12 gap-2 text-[10px] leading-tight">
+                    <div className="col-span-5 rounded-md border border-gray-200 bg-gray-50 p-2">
+                      <p className="font-bold uppercase text-gray-500">Cliente</p>
+                      <p className="mt-1 text-[12px] font-black text-gray-950">{selectedLead?.name || selectedVisit.leadName}</p>
+                    </div>
+                    <div className="col-span-3 rounded-md border border-gray-200 bg-gray-50 p-2">
+                      <p className="font-bold uppercase text-gray-500">Telefone completo</p>
+                      <p className="mt-1 text-[12px] font-black text-gray-950">{selectedLead?.phone || selectedVisit.phone}</p>
+                    </div>
+                    <div className="col-span-2 rounded-md border border-gray-200 bg-gray-50 p-2">
+                      <p className="font-bold uppercase text-gray-500">Tipo</p>
+                      <p className="mt-1 text-[12px] font-black text-gray-950">{visitKind}</p>
+                    </div>
+                    <div className="col-span-2 rounded-md border border-gray-200 bg-gray-50 p-2">
+                      <p className="font-bold uppercase text-gray-500">Medidor</p>
+                      <p className="mt-1 text-[12px] font-black text-gray-950">{measurerName}</p>
+                    </div>
+
+                    <div className="col-span-6 rounded-md border border-gray-200 p-2">
+                      <p className="font-bold uppercase text-gray-500">Endereço completo com bairro</p>
+                      <p className="mt-1 font-semibold text-gray-900">{fullAddress || 'Endereço não informado'}</p>
+                    </div>
+                    <div className="col-span-6 rounded-md border border-gray-200 p-2">
+                      <p className="font-bold uppercase text-gray-500">Referência</p>
+                      <p className="mt-1 font-semibold text-gray-900">{reference}</p>
+                    </div>
+
+                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
+                      <p className="font-bold uppercase text-red-700">Disponibilidade de horário</p>
+                      <p className="mt-1 text-[12px] font-black text-red-900">{availability}</p>
+                    </div>
+                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
+                      <p className="font-bold uppercase text-red-700">Data de solicitação</p>
+                      <p className="mt-1 text-[12px] font-black text-red-900">{formatDateSafe(selectedLead?.createdAt || selectedVisit.createdAt)}</p>
+                    </div>
+                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
+                      <p className="font-bold uppercase text-red-700">Data de medição</p>
+                      <p className="mt-1 text-[12px] font-black text-red-900">
+                        {formatDateSafe(selectedVisit.date)} {selectedVisit.time ? `às ${selectedVisit.time}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+                <div className="measurement-print-blank" aria-label="Área em branco para medições manuais" />
+              </div>
+
+              <Card className="hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5">
                   <div className="flex items-center gap-3">
@@ -430,6 +525,10 @@ export const Visitas: React.FC = () => {
       {/* Print Styles */}
       <style>{`
         @media print {
+          @page {
+            size: A4;
+            margin: 0;
+          }
           body * {
             visibility: hidden;
           }
@@ -440,7 +539,23 @@ export const Visitas: React.FC = () => {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+          }
+          .measurement-print-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            background: white;
+          }
+          .measurement-print-header {
+            max-height: 58mm;
+            overflow: hidden;
+          }
+          .measurement-print-blank {
+            height: 220mm;
+            background: white;
           }
           .no-print {
             display: none !important;
