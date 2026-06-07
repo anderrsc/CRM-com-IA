@@ -513,7 +513,8 @@ export const Orcamentos: React.FC = () => {
   };
 
   const handleDownloadBudget = (budget: Budget) => {
-    const ok = openBudgetPdf(budget, quoteSettings);
+    const lead = leads.find(l => l.id === budget.leadId);
+    const ok = openBudgetPdf(budget, quoteSettings, lead);
     if (ok) toast.success('PDF aberto para impressao');
     else toast.error('Permita pop-ups para gerar o PDF');
   };
