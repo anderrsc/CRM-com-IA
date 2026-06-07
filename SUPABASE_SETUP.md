@@ -15,6 +15,7 @@ Se o banco ja existe e voce ja rodou o script inicial, rode tambem:
 ```text
 supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
 supabase/migrations/20260607103000_quote_pricing_and_emission.sql
+supabase/migrations/20260607112000_purchases_and_quote_logo.sql
 ```
 
 Esses upgrades adicionam o novo funil, papeis de gerente/secretaria, valor potencial, ultima interacao, tabela de precos de orcamento e personalizacao da emissao.
@@ -27,7 +28,8 @@ Esses upgrades adicionam o novo funil, papeis de gerente/secretaria, valor poten
 - `measurement_sheets` - fichas de medicao
 - `budgets` - orcamentos
 - `quote_price_items` - tabela de precos para calhas, rufos, pingadeiras e itens especiais
-- `quote_settings` - dados personalizados da emissao do orcamento
+- `quote_settings` - dados personalizados da emissao do orcamento e logo
+- `purchases` - compras, fornecedores, valores, pagamento e recebimento de materiais
 - `productions` - ordens de producao
 - `installations` - instalacoes
 - `knowledge_items` - base de conhecimento

@@ -8,6 +8,7 @@ import {
   Wrench,
   BookOpen,
   Settings,
+  ShoppingCart,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -41,6 +42,7 @@ const menuItems: MenuItem[] = [
   { id: 'agenda', label: 'Agenda', icon: Calendar, group: 'Comercial' },
   { id: 'visitas', label: 'Fichas de Visita', icon: ClipboardList, group: 'Comercial' },
   { id: 'orcamentos', label: 'Orçamentos', icon: FileText, group: 'Comercial' },
+  { id: 'compras', label: 'Compras', icon: ShoppingCart, group: 'Operação' },
   { id: 'producao', label: 'Produção', icon: Factory, group: 'Operação' },
   { id: 'instalacao', label: 'Instalação', icon: Wrench, group: 'Operação' },
   { id: 'conhecimento', label: 'Base de Conhecimento', icon: BookOpen, group: 'Sistema' },
@@ -49,8 +51,11 @@ const menuItems: MenuItem[] = [
 
 const roleAccess: Record<string, string[]> = {
   admin: menuItems.map((item) => item.id),
+  gerente: menuItems.map((item) => item.id).filter((id) => id !== 'settings'),
   vendedor: ['dashboard', 'central-ia', 'crm', 'funil', 'agenda', 'visitas', 'orcamentos'],
-  producao: ['dashboard', 'producao'],
+  secretaria: ['dashboard', 'central-ia', 'crm', 'funil', 'agenda', 'visitas'],
+  compras: ['dashboard', 'compras', 'producao'],
+  producao: ['dashboard', 'producao', 'compras'],
   instalador: ['dashboard', 'instalacao'],
 };
 

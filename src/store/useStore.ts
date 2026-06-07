@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
   User, Lead, Visit, Budget, Production, Installation, MeasurementSheet, Subscription,
-  KnowledgeItem, Notification, LeadStatus, QuotePriceItem, QuoteSettings
+  KnowledgeItem, Notification, LeadStatus, QuotePriceItem, QuoteSettings, Purchase
 } from '../types';
 import { api } from '../services/api';
 
@@ -62,6 +62,10 @@ interface AppState {
   deleteQuotePriceItem: (id: string) => void;
   quoteSettings: QuoteSettings;
   updateQuoteSettings: (updates: Partial<QuoteSettings>) => void;
+  purchases: Purchase[];
+  addPurchase: (purchase: Purchase) => void;
+  updatePurchase: (id: string, updates: Partial<Purchase>) => void;
+  deletePurchase: (id: string) => void;
   
   // Productions
   productions: Production[];
@@ -112,6 +116,7 @@ export const useStore = create<AppState>()(
             notifications,
             quotePriceItems,
             quoteSettingsRows,
+            purchases,
           ] = await Promise.all([
             api.listData<Lead>('leads'),
             api.listData<Visit>('visits'),
@@ -125,6 +130,7 @@ export const useStore = create<AppState>()(
             api.listData<Notification>('notifications'),
             api.listData<QuotePriceItem>('quotePriceItems'),
             api.listData<QuoteSettings>('quoteSettings'),
+            api.listData<Purchase>('purchases'),
           ]);
 
           set((state) => ({
@@ -141,6 +147,7 @@ export const useStore = create<AppState>()(
             notifications,
             quotePriceItems,
             quoteSettings: quoteSettingsRows[0] || state.quoteSettings,
+            purchases,
           }));
         } catch (error) {
           console.warn('Banco indisponivel, usando dados locais', error);
@@ -287,6 +294,7 @@ export const useStore = create<AppState>()(
         id: 'main',
         companyName: 'Marquinhos',
         document: '00.000.000/0001-00',
+        logoUrl: '',
         phone: '(44) 99999-0000',
         email: 'contato@marquinhos.com',
         headerText: 'Orcamento profissional para fornecimento e instalacao.',
@@ -300,6 +308,21 @@ export const useStore = create<AppState>()(
         const quoteSettings = { ...state.quoteSettings, ...updates, id: 'main', updatedAt: new Date() };
         syncSave('quoteSettings', quoteSettings);
         return { quoteSettings };
+      }),
+      purchases: [],
+      addPurchase: (purchase) => set((state) => {
+        syncSave('purchases', purchase);
+        return { purchases: [purchase, ...state.purchases] };
+      }),
+      updatePurchase: (id, updates) => set((state) => {
+        const purchases = state.purchases.map(purchase => purchase.id === id ? { ...purchase, ...updates, updatedAt: new Date() } : purchase);
+        const updated = purchases.find(purchase => purchase.id === id);
+        if (updated) syncSave('purchases', updated);
+        return { purchases };
+      }),
+      deletePurchase: (id) => set((state) => {
+        syncDelete('purchases', id);
+        return { purchases: state.purchases.filter(purchase => purchase.id !== id) };
       }),
       
       // Productions

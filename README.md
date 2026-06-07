@@ -43,6 +43,7 @@ Se o banco ja foi criado antes, execute tambem a migration incremental:
 ```text
 supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
 supabase/migrations/20260607103000_quote_pricing_and_emission.sql
+supabase/migrations/20260607112000_purchases_and_quote_logo.sql
 ```
 
 3. No Vercel, configure as variaveis de ambiente:
@@ -103,6 +104,7 @@ Token de verificacao: mesmo valor de WHATSAPP_VERIFY_TOKEN
 | Agenda | Calendario de visitas |
 | Fichas de Visita | Geracao e impressao de fichas |
 | Orcamentos | Criacao e envio de orcamentos |
+| Compras | Materiais, fornecedores, valores e recebimentos |
 | Producao | Acompanhamento de ordens de producao |
 | Instalacao | Gerenciamento de instalacoes |
 | Base de Conhecimento | Catalogo de produtos e servicos |

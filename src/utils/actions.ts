@@ -77,6 +77,7 @@ export const buildBudgetText = (budget: Budget, settings?: QuoteSettings) => {
 
   return [
     `ORCAMENTO - ${settings?.companyName || 'Marquinhos'}`,
+    settings?.logoUrl ? `Logo: ${settings.logoUrl}` : '',
     settings?.document ? `Documento: ${settings.document}` : '',
     settings?.phone ? `Telefone: ${settings.phone}` : '',
     settings?.email ? `E-mail: ${settings.email}` : '',

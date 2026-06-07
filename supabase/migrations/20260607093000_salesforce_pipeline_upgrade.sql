@@ -4,7 +4,7 @@
 alter table public.app_users drop constraint if exists app_users_role_check;
 alter table public.app_users
   add constraint app_users_role_check
-  check (role in ('admin', 'gerente', 'vendedor', 'secretaria', 'producao', 'instalador'));
+  check (role in ('admin', 'gerente', 'vendedor', 'secretaria', 'compras', 'producao', 'instalador'));
 
 alter table public.leads drop constraint if exists leads_status_check;
 alter table public.leads

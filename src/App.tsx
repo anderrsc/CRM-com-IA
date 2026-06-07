@@ -12,6 +12,7 @@ import { Funil } from './pages/Funil';
 import { Agenda } from './pages/Agenda';
 import { Visitas } from './pages/Visitas';
 import { Orcamentos } from './pages/Orcamentos';
+import { Compras } from './pages/Compras';
 import { Producao } from './pages/Producao';
 import { Instalacao } from './pages/Instalacao';
 import { Conhecimento } from './pages/Conhecimento';
@@ -56,6 +57,7 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   agenda: { title: 'Agenda', subtitle: 'Visitas e compromissos' },
   visitas: { title: 'Fichas de Visita', subtitle: 'Gerar e imprimir fichas' },
   orcamentos: { title: 'Orçamentos', subtitle: 'Crie e envie orçamentos' },
+  compras: { title: 'Compras', subtitle: 'Materiais, fornecedores e recebimentos' },
   producao: { title: 'Produção', subtitle: 'Acompanhe a produção' },
   instalacao: { title: 'Instalação', subtitle: 'Gerenciar instalações' },
   conhecimento: { title: 'Base de Conhecimento', subtitle: 'Produtos e serviços' },
@@ -102,6 +104,8 @@ const App: React.FC = () => {
         return <Visitas />;
       case 'orcamentos':
         return <Orcamentos />;
+      case 'compras':
+        return <Compras />;
       case 'producao':
         return <Producao />;
       case 'instalacao':
@@ -354,6 +358,7 @@ const SettingsPage: React.FC = () => {
                 { value: 'gerente', label: 'Gerente' },
                 { value: 'vendedor', label: 'Vendedor' },
                 { value: 'secretaria', label: 'Secretaria' },
+                { value: 'compras', label: 'Compras' },
                 { value: 'producao', label: 'Producao' },
                 { value: 'instalador', label: 'Instalador' },
                 { value: 'admin', label: 'Admin' },

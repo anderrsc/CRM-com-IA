@@ -1,5 +1,5 @@
 // User types
-export type UserRole = 'admin' | 'gerente' | 'vendedor' | 'secretaria' | 'producao' | 'instalador';
+export type UserRole = 'admin' | 'gerente' | 'vendedor' | 'secretaria' | 'compras' | 'producao' | 'instalador';
 
 export interface User {
   id: string;
@@ -170,6 +170,7 @@ export interface QuoteSettings {
   id: string;
   companyName: string;
   document: string;
+  logoUrl?: string;
   phone?: string;
   email?: string;
   headerText: string;
@@ -177,6 +178,27 @@ export interface QuoteSettings {
   pixKey?: string;
   defaultValidity: number;
   defaultPaymentConditions: string;
+  updatedAt: Date;
+}
+
+export interface Purchase {
+  id: string;
+  leadId?: string;
+  leadName: string;
+  supplier: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  unitCost: number;
+  total: number;
+  paymentMethod: 'pix' | 'boleto' | 'cartao' | 'dinheiro' | 'transferencia' | 'outro';
+  purchasedBy: string;
+  purchasedAt: Date;
+  expectedAt?: Date;
+  receivedAt?: Date;
+  status: 'comprado' | 'recebido' | 'cancelado';
+  notes?: string;
+  createdAt: Date;
   updatedAt: Date;
 }
 

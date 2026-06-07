@@ -536,6 +536,11 @@ export const Orcamentos: React.FC = () => {
                   onChange={(e) => updateQuoteSettings({ document: e.target.value })}
                 />
                 <Input
+                  label="URL da logo"
+                  value={quoteSettings.logoUrl || ''}
+                  onChange={(e) => updateQuoteSettings({ logoUrl: e.target.value })}
+                />
+                <Input
                   label="Telefone"
                   value={quoteSettings.phone || ''}
                   onChange={(e) => updateQuoteSettings({ phone: e.target.value })}
@@ -898,9 +903,17 @@ export const Orcamentos: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between border-b pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                  M
-                </div>
+                {quoteSettings.logoUrl ? (
+                  <img
+                    src={quoteSettings.logoUrl}
+                    alt={quoteSettings.companyName}
+                    className="h-14 w-14 rounded-lg border border-gray-200 object-contain"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                    M
+                  </div>
+                )}
                 <div>
                   <h1 className="text-xl font-bold">{quoteSettings.companyName}</h1>
                   <p className="text-sm text-gray-500">{quoteSettings.document}</p>
