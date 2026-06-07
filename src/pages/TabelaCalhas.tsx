@@ -9,7 +9,7 @@ import { Input, Select } from '../components/ui/Input';
 import { useStore } from '../store/useStore';
 import { QuotePriceItem } from '../types';
 
-const thicknesses = ['0.43', '0.50', '0.60', '0.80'];
+const thicknesses = ['0.5', '0.6', '0.7', '1.0'];
 const widths = ['150', '200', '250', '300', '330', '350', '400', '500', '600', '700', '800', '900', '1000', '1200'];
 const colors = ['Natural', 'Branco', 'Preto', 'Bronze', 'Grafite'];
 
@@ -167,53 +167,47 @@ export const TabelaCalhas: React.FC = () => {
         </Card>
       </div>
 
-      <Card padding="none">
-        <div className="border-b border-gray-100 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-gray-900">Calha aluminio por metro</span>
-            <Badge className="bg-red-100 text-red-700">{color}</Badge>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        {thicknesses.map((thickness) => (
+          <Card key={thickness} padding="none">
+            <div className="border-b border-gray-100 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-semibold text-gray-900">Calha aluminio {thickness}mm</span>
+                <Badge className="bg-red-100 text-red-700">{color}</Badge>
+              </div>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="sticky left-0 z-10 w-36 bg-gray-50 px-4 py-3 text-left font-semibold text-gray-700">
-                  Largura / corte
-                </th>
-                {thicknesses.map((thickness) => (
-                  <th key={thickness} className="px-3 py-3 text-left font-semibold text-gray-700">
-                    {thickness}mm
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {widths.map((width) => (
-                <tr key={width} className="border-t border-gray-100">
-                  <td className="sticky left-0 z-10 bg-white px-4 py-3 font-semibold text-gray-900">
-                    C/{width}
-                  </td>
-                  {thicknesses.map((thickness) => (
-                    <td key={thickness} className="px-3 py-2">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={getCellValue(width, thickness)}
-                        onChange={(event) => setCellValue(width, thickness, event.target.value)}
-                        placeholder="R$/m"
-                        className="h-10"
-                      />
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[360px] text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="w-36 px-4 py-3 text-left font-semibold text-gray-700">Largura / corte</th>
+                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Valor por metro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {widths.map((width) => (
+                    <tr key={width} className="border-t border-gray-100">
+                      <td className="px-4 py-3 font-semibold text-gray-900">C/{width}</td>
+                      <td className="px-4 py-2">
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={getCellValue(width, thickness)}
+                          onChange={(event) => setCellValue(width, thickness, event.target.value)}
+                          placeholder="R$/m"
+                          className="h-10"
+                        />
+                      </td>
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

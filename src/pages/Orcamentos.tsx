@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
-import { buildBudgetText, copyText, downloadTextFile, openWhatsApp } from '../utils/actions';
+import { buildBudgetText, copyText, openBudgetPdf, openWhatsApp } from '../utils/actions';
 
 type QuoteType = 'calhas' | 'esquadrias';
 
@@ -70,8 +70,8 @@ export const Orcamentos: React.FC = () => {
     priceMode: 'saved' as 'saved' | 'manual',
     priceItemId: '',
     category: 'calha' as BudgetItem['category'],
-    product: 'Calha',
-    thickness: '0.50',
+    product: 'Calha Platibanda',
+    thickness: '0.5',
     cut: '300',
     color: 'Natural',
     description: '',
@@ -81,24 +81,35 @@ export const Orcamentos: React.FC = () => {
   });
 
   const [priceForm, setPriceForm] = useState({
-    name: 'Calha',
+    name: 'Calha Platibanda',
     category: 'calha' as QuotePriceItem['category'],
-    thickness: '0.50',
+    thickness: '0.5',
     cut: '300',
     color: 'Natural',
     unit: 'm',
     unitPrice: 0,
   });
 
-  const thicknessOptions = ['0.43', '0.50', '0.60', '0.80'];
+  const thicknessOptions = ['0.5', '0.6', '0.7', '1.0'];
   const cutOptions = ['150', '200', '250', '300', '330', '350', '400', '500', '600', '700', '800', '900', '1000', '1200'];
-  const colorOptions = ['Natural', 'Branco', 'Preto', 'Bronze', 'Grafite'];
+  const colorOptions = ['Natural', 'Branco', 'Preto', 'Bronze', 'Grafite', 'Personalizada'];
   const productOptions = [
-    { value: 'Calha', label: 'Calha' },
-    { value: 'Rufo', label: 'Rufo' },
+    { value: 'Calha Platibanda', label: 'Calha platibanda' },
+    { value: 'Calha Beiral', label: 'Calha beiral' },
+    { value: 'Calha Coletora', label: 'Calha coletora' },
+    { value: 'Calha de Meio', label: 'Calha de meio' },
     { value: 'Rufo com Pingadeira', label: 'Rufo com Pingadeira' },
-    { value: 'Pingadeira', label: 'Pingadeira' },
-    { value: 'Condutor', label: 'Condutor' },
+    { value: 'Rufo Chapeu', label: 'Rufo chapeu' },
+    { value: 'Rufo de Acabamento', label: 'Rufo de acabamento' },
+    { value: 'Pingadeira com Rufo', label: 'Pingadeira com rufo' },
+    { value: 'Pingadeira de Muro', label: 'Pingadeira de muro' },
+    { value: 'Pingadeira de Fechamento', label: 'Pingadeira de fechamento' },
+    { value: 'Linha de Acessorios', label: 'Linha de acessorios' },
+    { value: 'Produto Avulso', label: 'Produto avulso' },
+    { value: 'Mao de Obra Manutencao', label: 'MÃO DE OBRA - MANUTENÇÃO' },
+    { value: 'Mao de Obra Instalacao', label: 'MÃO DE OBRA - INSTALAÇÃO' },
+    { value: 'Mao de Obra Pintura', label: 'MÃO DE OBRA - PINTURA' },
+    { value: 'Mao de Obra Remocao Telhas', label: 'MÃO DE OBRA - REMOÇÃO E REINSTALAÇÃO DE TELHAS' },
   ];
   const frameProductOptions = [
     { value: 'Janela', label: 'Janela' },
@@ -115,8 +126,8 @@ export const Orcamentos: React.FC = () => {
   const quoteTypeConfig: Record<QuoteType, { label: string; description: string; categories: BudgetItem['category'][] }> = {
     calhas: {
       label: 'Calhas',
-      description: 'Calhas, rufos, pingadeiras e condutores',
-      categories: ['calha', 'rufo', 'pingadeira', 'outro'],
+      description: 'Calhas, rufos, pingadeiras, acessorios e instalacao',
+      categories: ['calha', 'rufo', 'pingadeira', 'acessorio', 'instalacao', 'outro'],
     },
     esquadrias: {
       label: 'Esquadrias',
@@ -128,8 +139,34 @@ export const Orcamentos: React.FC = () => {
   const currentProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
   const currentPriceProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
 
+  const gutterProductNames: Record<string, string> = {
+    'Calha Platibanda': 'CALHA DE PLATIBANDA',
+    'Calha Beiral': 'CALHA DE BEIRAL',
+    'Calha Coletora': 'CALHA COLETORA',
+    'Calha de Meio': 'CALHA DE MEIO',
+    'Rufo com Pingadeira': 'RUFO COM PINGADEIRA',
+    'Rufo Chapeu': 'RUFO CHAPEU',
+    'Rufo de Acabamento': 'RUFO DE ACABAMENTO',
+    'Pingadeira com Rufo': 'PINGADEIRA COM RUFO',
+    'Pingadeira de Muro': 'PINGADEIRA DE MURO',
+    'Pingadeira de Fechamento': 'PINGADEIRA DE FECHAMENTO',
+    'Linha de Acessorios': 'LINHA DE ACESSORIOS',
+    'Produto Avulso': 'PRODUTO',
+    'Mao de Obra Manutencao': 'MÃO DE OBRA PARA MANUTENÇÃO',
+    'Mao de Obra Instalacao': 'MÃO DE OBRA PARA INSTALAÇÃO',
+    'Mao de Obra Pintura': 'MÃO DE OBRA PARA PINTURA',
+    'Mao de Obra Remocao Telhas': 'MÃO DE OBRA PARA REMOÇÃO E REINSTALAÇÃO DE TELHAS',
+  };
+
+  const buildGutterItemName = (product: string, thickness: string, cut: string, color: string) => {
+    const baseName = gutterProductNames[product] || product.toUpperCase();
+    const category = categoryFromProduct(product);
+    if (category === 'instalacao') return baseName;
+    return `${baseName} EM ALUMÍNIO ${thickness}MM C/${cut}MM NA COR ${color.toUpperCase()}`;
+  };
+
   const buildMetalSheetDescription = () => {
-    return `${newItem.product} Aluminio ${newItem.thickness}mm C/${newItem.cut} ${newItem.color}`;
+    return buildGutterItemName(newItem.product, newItem.thickness, newItem.cut, newItem.color);
   };
 
   const buildPriceItemName = () => {
@@ -137,11 +174,12 @@ export const Orcamentos: React.FC = () => {
       return `${priceForm.name} ${priceForm.color}`.trim();
     }
 
-    return `${priceForm.name} Aluminio ${priceForm.thickness}mm C/${priceForm.cut} ${priceForm.color}`;
+    return buildGutterItemName(priceForm.name, priceForm.thickness, priceForm.cut, priceForm.color);
   };
 
   const categoryFromProduct = (product: string): BudgetItem['category'] => {
     const normalized = product.toLowerCase();
+    if (normalized.includes('mao de obra') || normalized.includes('manutencao') || normalized.includes('pintura') || normalized.includes('telhas')) return 'instalacao';
     if (normalized.includes('rufo')) return 'rufo';
     if (normalized.includes('pingadeira')) return 'pingadeira';
     if (normalized.includes('vidro') || normalized.includes('box') || normalized.includes('guarda')) return 'vidro';
@@ -149,6 +187,7 @@ export const Orcamentos: React.FC = () => {
     if (normalized.includes('instal')) return 'instalacao';
     if (normalized.includes('janela') || normalized.includes('porta') || normalized.includes('basculante')) return 'esquadria';
     if (normalized.includes('calha') || normalized.includes('condutor')) return 'calha';
+    if (normalized.includes('acessorios') || normalized.includes('avulso')) return 'acessorio';
     return 'outro';
   };
 
@@ -162,9 +201,15 @@ export const Orcamentos: React.FC = () => {
     item.active && quoteTypeConfig[formData.quoteType].categories.includes(item.category || 'outro')
   );
   const filteredBudgets = budgets.filter(budget => getBudgetType(budget) === activeQuoteType);
+  const matchingPriceItem = activePriceItems.find((item) =>
+    item.name.toLowerCase().startsWith(newItem.product.toLowerCase()) &&
+    item.thickness === newItem.thickness &&
+    item.cut === newItem.cut &&
+    (item.color || 'Natural') === newItem.color
+  );
 
   const setQuoteType = (quoteType: QuoteType) => {
-    const nextProduct = quoteType === 'calhas' ? 'Calha' : 'Janela';
+    const nextProduct = quoteType === 'calhas' ? 'Calha Platibanda' : 'Janela';
     const nextUnit = quoteType === 'calhas' ? 'm' : 'un';
 
     setFormData({ ...formData, quoteType, items: [] });
@@ -173,7 +218,7 @@ export const Orcamentos: React.FC = () => {
       priceItemId: '',
       category: quoteType === 'calhas' ? 'calha' : 'esquadria',
       product: nextProduct,
-      thickness: quoteType === 'calhas' ? '0.50' : '',
+      thickness: quoteType === 'calhas' ? '0.5' : '',
       cut: quoteType === 'calhas' ? '300' : '',
       color: quoteType === 'calhas' ? 'Natural' : 'Branco',
       description: '',
@@ -184,7 +229,7 @@ export const Orcamentos: React.FC = () => {
     setPriceForm({
       name: nextProduct,
       category: quoteType === 'calhas' ? 'calha' : 'esquadria',
-      thickness: quoteType === 'calhas' ? '0.50' : '',
+      thickness: quoteType === 'calhas' ? '0.5' : '',
       cut: quoteType === 'calhas' ? '300' : '',
       color: quoteType === 'calhas' ? 'Natural' : 'Branco',
       unit: nextUnit,
@@ -248,35 +293,79 @@ export const Orcamentos: React.FC = () => {
     return { itemsTotal, subtotal, discountAmount, total };
   };
 
+  const getPaintItems = (quantity: number, unit: string, color: string): BudgetItem[] => {
+    if (color.toLowerCase() === 'natural') return [];
+
+    const paintQuantity = Math.max(1, quantity);
+    const paintUnit = unit || 'm';
+    const laborUnitPrice = 8;
+    const materialUnitPrice = 12;
+
+    return [
+      {
+        id: uuidv4(),
+        description: `Mao de obra para pintura ${color}`,
+        quantity: paintQuantity,
+        unit: paintUnit,
+        unitPrice: laborUnitPrice,
+        category: 'instalacao',
+        priceSource: 'manual',
+        total: paintQuantity * laborUnitPrice,
+      },
+      {
+        id: uuidv4(),
+        description: `Materiais necessarios para pintura ${color}`,
+        quantity: paintQuantity,
+        unit: paintUnit,
+        unitPrice: materialUnitPrice,
+        category: 'instalacao',
+        priceSource: 'manual',
+        total: paintQuantity * materialUnitPrice,
+      },
+    ];
+  };
+
   const handleAddItem = () => {
     const description = formData.quoteType === 'calhas'
       ? (newItem.description || buildMetalSheetDescription())
       : newItem.description;
 
-    if (!description || newItem.unitPrice <= 0) return;
+    const unitPrice = newItem.priceMode === 'saved' && matchingPriceItem
+      ? matchingPriceItem.unitPrice
+      : newItem.unitPrice;
 
+    if (!description || unitPrice <= 0) return;
+
+    const category = categoryFromProduct(newItem.product);
     const item: BudgetItem = {
       id: uuidv4(),
       description,
       quantity: newItem.quantity,
       unit: newItem.unit,
-      unitPrice: newItem.unitPrice,
-      category: categoryFromProduct(newItem.product),
+      unitPrice,
+      category,
       thickness: newItem.thickness,
       cut: newItem.cut,
       color: newItem.color,
       priceSource: newItem.priceMode,
-      priceItemId: newItem.priceItemId || undefined,
-      total: newItem.quantity * newItem.unitPrice,
+      priceItemId: newItem.priceItemId || matchingPriceItem?.id || undefined,
+      total: newItem.quantity * unitPrice,
     };
 
-    setFormData({ ...formData, items: [...formData.items, item] });
+    const automaticItems = formData.quoteType === 'calhas' && ['calha', 'rufo', 'pingadeira', 'acessorio'].includes(category || '')
+      ? getPaintItems(newItem.quantity, newItem.unit, newItem.color)
+      : [];
+
+    setFormData({ ...formData, items: [...formData.items, item, ...automaticItems] });
+    if (automaticItems.length) {
+      toast.success('Pintura adicionada automaticamente');
+    }
     setNewItem({
       category: formData.quoteType === 'calhas' ? 'calha' : 'esquadria',
       priceMode: 'saved',
       priceItemId: '',
-      product: formData.quoteType === 'calhas' ? 'Calha' : 'Janela',
-      thickness: formData.quoteType === 'calhas' ? '0.50' : '',
+      product: formData.quoteType === 'calhas' ? 'Calha Platibanda' : 'Janela',
+      thickness: formData.quoteType === 'calhas' ? '0.5' : '',
       cut: formData.quoteType === 'calhas' ? '300' : '',
       color: formData.quoteType === 'calhas' ? 'Natural' : 'Branco',
       description: '',
@@ -424,8 +513,10 @@ export const Orcamentos: React.FC = () => {
   };
 
   const handleDownloadBudget = (budget: Budget) => {
-    downloadTextFile(`orcamento-${budget.id.slice(0, 8)}.txt`, buildBudgetText(budget, quoteSettings));
-    toast.success('Arquivo do orçamento baixado');
+    const lead = leads.find(l => l.id === budget.leadId);
+    const ok = openBudgetPdf(budget, quoteSettings, lead);
+    if (ok) toast.success('PDF aberto para impressao');
+    else toast.error('Permita pop-ups para gerar o PDF');
   };
 
   const handleCopyBudget = async (budget: Budget) => {
@@ -807,7 +898,7 @@ export const Orcamentos: React.FC = () => {
                 <Select
                   label="Preco salvo"
                   options={[
-                    { value: '', label: activePriceItems.length ? 'Escolha um preco salvo' : 'Nenhum preco salvo' },
+                    { value: '', label: matchingPriceItem ? `${matchingPriceItem.name} - ${formatCurrency(matchingPriceItem.unitPrice)}/m` : (activePriceItems.length ? 'Escolha um preco salvo' : 'Nenhum preco salvo') },
                     ...activePriceItems.map(item => ({ value: item.id, label: `${item.name} - ${formatCurrency(item.unitPrice)}/${item.unit}` })),
                   ]}
                   value={newItem.priceItemId}
@@ -876,10 +967,11 @@ export const Orcamentos: React.FC = () => {
                   label="Valor unitario"
                   type="number"
                   placeholder="R$ Unit"
-                  value={newItem.unitPrice || ''}
+                  value={newItem.priceMode === 'saved' && matchingPriceItem ? matchingPriceItem.unitPrice : (newItem.unitPrice || '')}
                   onChange={(e) => setNewItem({ ...newItem, unitPrice: Number(e.target.value) })}
                   min={0}
                   step={0.01}
+                  disabled={newItem.priceMode === 'saved' && Boolean(matchingPriceItem)}
                 />
                 <div className="flex items-end">
                   <Button type="button" onClick={handleAddItem} className="w-full">

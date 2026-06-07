@@ -28,8 +28,8 @@ create table if not exists public.leads (
   email text,
   address text not null default '',
   neighborhood text not null default '',
-  city text not null default 'Maringa',
-  state text not null default 'PR',
+  city text not null default 'Jaragua do Sul',
+  state text not null default 'SC',
   zip_code text,
   origin text not null check (origin in ('whatsapp', 'instagram', 'telefone', 'indicacao', 'site', 'outro')),
   service text not null default 'A definir',
@@ -121,6 +121,13 @@ create table if not exists public.quote_settings (
   header_text text not null default '',
   footer_text text not null default '',
   pix_key text,
+  accent_color text not null default '#b91c1c',
+  secondary_color text not null default '#111827',
+  font_family text not null default 'Arial',
+  layout_style text not null default 'moderno' check (layout_style in ('classico', 'moderno', 'compacto')),
+  watermark_text text,
+  show_qr_code boolean not null default true,
+  show_signature boolean not null default true,
   default_validity integer not null default 15,
   default_payment_conditions text not null default '',
   updated_at timestamptz not null default now()
@@ -432,7 +439,8 @@ on conflict (id) do nothing;
 
 insert into public.quote_settings (
   id, company_name, document, logo_url, phone, email, header_text, footer_text,
-  pix_key, default_validity, default_payment_conditions, updated_at
+  pix_key, accent_color, secondary_color, font_family, layout_style, watermark_text,
+  show_qr_code, show_signature, default_validity, default_payment_conditions, updated_at
 )
 values (
   'main',
@@ -444,6 +452,13 @@ values (
   'Orcamento profissional para fornecimento e instalacao.',
   'Agradecemos a preferencia. Valores sujeitos a conferencia tecnica.',
   null,
+  '#b91c1c',
+  '#111827',
+  'Arial',
+  'moderno',
+  null,
+  true,
+  true,
   15,
   '50% entrada + 50% na entrega',
   now()

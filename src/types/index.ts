@@ -176,6 +176,13 @@ export interface QuoteSettings {
   headerText: string;
   footerText: string;
   pixKey?: string;
+  accentColor?: string;
+  secondaryColor?: string;
+  fontFamily?: string;
+  layoutStyle?: 'classico' | 'moderno' | 'compacto';
+  watermarkText?: string;
+  showQrCode?: boolean;
+  showSignature?: boolean;
   defaultValidity: number;
   defaultPaymentConditions: string;
   updatedAt: Date;
