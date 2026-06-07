@@ -28,6 +28,8 @@ import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { buildBudgetText, copyText, downloadTextFile, openWhatsApp } from '../utils/actions';
 
+type QuoteType = 'calhas' | 'esquadrias';
+
 export const Orcamentos: React.FC = () => {
   const {
     budgets,
@@ -48,9 +50,11 @@ export const Orcamentos: React.FC = () => {
   const [showNewModal, setShowNewModal] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
+  const [activeQuoteType, setActiveQuoteType] = useState<QuoteType>('calhas');
 
   // Form state
   const [formData, setFormData] = useState({
+    quoteType: 'calhas' as QuoteType,
     leadId: '',
     items: [] as BudgetItem[],
     laborCost: 0,
@@ -96,12 +100,43 @@ export const Orcamentos: React.FC = () => {
     { value: 'Pingadeira', label: 'Pingadeira' },
     { value: 'Condutor', label: 'Condutor' },
   ];
+  const frameProductOptions = [
+    { value: 'Janela', label: 'Janela' },
+    { value: 'Porta', label: 'Porta' },
+    { value: 'Porta de correr', label: 'Porta de correr' },
+    { value: 'Basculante', label: 'Basculante' },
+    { value: 'Box', label: 'Box' },
+    { value: 'Guarda-corpo', label: 'Guarda-corpo' },
+    { value: 'Vidro', label: 'Vidro' },
+    { value: 'Acessorio', label: 'Acessorio' },
+    { value: 'Instalacao', label: 'Instalacao' },
+  ];
+
+  const quoteTypeConfig: Record<QuoteType, { label: string; description: string; categories: BudgetItem['category'][] }> = {
+    calhas: {
+      label: 'Calhas',
+      description: 'Calhas, rufos, pingadeiras e condutores',
+      categories: ['calha', 'rufo', 'pingadeira', 'outro'],
+    },
+    esquadrias: {
+      label: 'Esquadrias',
+      description: 'Portas, janelas, vidros, acessorios e instalacao',
+      categories: ['esquadria', 'vidro', 'acessorio', 'instalacao', 'outro'],
+    },
+  };
+
+  const currentProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
+  const currentPriceProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
 
   const buildMetalSheetDescription = () => {
     return `${newItem.product} Aluminio ${newItem.thickness}mm C/${newItem.cut} ${newItem.color}`;
   };
 
   const buildPriceItemName = () => {
+    if (formData.quoteType === 'esquadrias') {
+      return `${priceForm.name} ${priceForm.color}`.trim();
+    }
+
     return `${priceForm.name} Aluminio ${priceForm.thickness}mm C/${priceForm.cut} ${priceForm.color}`;
   };
 
@@ -109,12 +144,53 @@ export const Orcamentos: React.FC = () => {
     const normalized = product.toLowerCase();
     if (normalized.includes('rufo')) return 'rufo';
     if (normalized.includes('pingadeira')) return 'pingadeira';
+    if (normalized.includes('vidro') || normalized.includes('box') || normalized.includes('guarda')) return 'vidro';
+    if (normalized.includes('acessorio')) return 'acessorio';
     if (normalized.includes('instal')) return 'instalacao';
+    if (normalized.includes('janela') || normalized.includes('porta') || normalized.includes('basculante')) return 'esquadria';
     if (normalized.includes('calha') || normalized.includes('condutor')) return 'calha';
     return 'outro';
   };
 
-  const activePriceItems = quotePriceItems.filter(item => item.active);
+  const getBudgetType = (budget: Budget): QuoteType => {
+    if (budget.quoteType) return budget.quoteType;
+    const hasFrames = budget.items.some(item => ['esquadria', 'vidro', 'acessorio'].includes(item.category || ''));
+    return hasFrames ? 'esquadrias' : 'calhas';
+  };
+
+  const activePriceItems = quotePriceItems.filter(item =>
+    item.active && quoteTypeConfig[formData.quoteType].categories.includes(item.category || 'outro')
+  );
+  const filteredBudgets = budgets.filter(budget => getBudgetType(budget) === activeQuoteType);
+
+  const setQuoteType = (quoteType: QuoteType) => {
+    const nextProduct = quoteType === 'calhas' ? 'Calha' : 'Janela';
+    const nextUnit = quoteType === 'calhas' ? 'm' : 'un';
+
+    setFormData({ ...formData, quoteType, items: [] });
+    setNewItem({
+      priceMode: 'saved',
+      priceItemId: '',
+      category: quoteType === 'calhas' ? 'calha' : 'esquadria',
+      product: nextProduct,
+      thickness: quoteType === 'calhas' ? '0.50' : '',
+      cut: quoteType === 'calhas' ? '300' : '',
+      color: quoteType === 'calhas' ? 'Natural' : 'Branco',
+      description: '',
+      quantity: 1,
+      unit: nextUnit,
+      unitPrice: 0,
+    });
+    setPriceForm({
+      name: nextProduct,
+      category: quoteType === 'calhas' ? 'calha' : 'esquadria',
+      thickness: quoteType === 'calhas' ? '0.50' : '',
+      cut: quoteType === 'calhas' ? '300' : '',
+      color: quoteType === 'calhas' ? 'Natural' : 'Branco',
+      unit: nextUnit,
+      unitPrice: 0,
+    });
+  };
 
   const handleSelectSavedPrice = (id: string) => {
     const priceItem = quotePriceItems.find(item => item.id === id);
@@ -173,11 +249,15 @@ export const Orcamentos: React.FC = () => {
   };
 
   const handleAddItem = () => {
-    if (!newItem.description || newItem.unitPrice <= 0) return;
+    const description = formData.quoteType === 'calhas'
+      ? (newItem.description || buildMetalSheetDescription())
+      : newItem.description;
+
+    if (!description || newItem.unitPrice <= 0) return;
 
     const item: BudgetItem = {
       id: uuidv4(),
-      description: newItem.description || buildMetalSheetDescription(),
+      description,
       quantity: newItem.quantity,
       unit: newItem.unit,
       unitPrice: newItem.unitPrice,
@@ -192,16 +272,16 @@ export const Orcamentos: React.FC = () => {
 
     setFormData({ ...formData, items: [...formData.items, item] });
     setNewItem({
-      category: 'calha',
+      category: formData.quoteType === 'calhas' ? 'calha' : 'esquadria',
       priceMode: 'saved',
       priceItemId: '',
-      product: 'Calha',
-      thickness: '0.50',
-      cut: '300',
-      color: 'Natural',
+      product: formData.quoteType === 'calhas' ? 'Calha' : 'Janela',
+      thickness: formData.quoteType === 'calhas' ? '0.50' : '',
+      cut: formData.quoteType === 'calhas' ? '300' : '',
+      color: formData.quoteType === 'calhas' ? 'Natural' : 'Branco',
       description: '',
       quantity: 1,
-      unit: 'm',
+      unit: formData.quoteType === 'calhas' ? 'm' : 'un',
       unitPrice: 0,
     });
   };
@@ -222,6 +302,7 @@ export const Orcamentos: React.FC = () => {
       id: uuidv4(),
       leadId: formData.leadId,
       leadName: selectedLead.name,
+      quoteType: formData.quoteType,
       items: formData.items,
       laborCost: formData.laborCost,
       travelCost: formData.travelCost,
@@ -245,6 +326,7 @@ export const Orcamentos: React.FC = () => {
 
   const resetForm = () => {
     setFormData({
+      quoteType: 'calhas',
       leadId: '',
       items: [],
       laborCost: 0,
@@ -369,13 +451,38 @@ export const Orcamentos: React.FC = () => {
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            {budgets.length} {budgets.length === 1 ? 'orçamento' : 'orçamentos'}
+            {filteredBudgets.length} {filteredBudgets.length === 1 ? 'orcamento' : 'orcamentos'} de {quoteTypeConfig[activeQuoteType].label.toLowerCase()}
           </h2>
-          <p className="text-sm text-gray-500">Crie e gerencie orçamentos</p>
+          <p className="text-sm text-gray-500">{quoteTypeConfig[activeQuoteType].description}</p>
         </div>
-        <Button onClick={() => setShowNewModal(true)} icon={<Plus size={18} />}>
-          Novo Orçamento
+        <Button onClick={() => { setQuoteType(activeQuoteType); setShowNewModal(true); }} icon={<Plus size={18} />}>
+          Novo Orcamento
         </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {(['calhas', 'esquadrias'] as QuoteType[]).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setActiveQuoteType(type)}
+            className={`rounded-lg border p-4 text-left transition-colors ${
+              activeQuoteType === type
+                ? 'border-red-600 bg-red-50 text-red-900'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-semibold">{quoteTypeConfig[type].label}</p>
+                <p className="text-sm opacity-75">{quoteTypeConfig[type].description}</p>
+              </div>
+              <Badge className={activeQuoteType === type ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}>
+                {budgets.filter(budget => getBudgetType(budget) === type).length}
+              </Badge>
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Stats */}
@@ -386,7 +493,7 @@ export const Orcamentos: React.FC = () => {
               <FileText size={20} className="text-gray-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{budgets.filter(b => b.status === 'draft').length}</p>
+              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'draft').length}</p>
               <p className="text-xs text-gray-500">Rascunhos</p>
             </div>
           </div>
@@ -397,7 +504,7 @@ export const Orcamentos: React.FC = () => {
               <Send size={20} className="text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{budgets.filter(b => b.status === 'sent').length}</p>
+              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'sent').length}</p>
               <p className="text-xs text-gray-500">Enviados</p>
             </div>
           </div>
@@ -408,7 +515,7 @@ export const Orcamentos: React.FC = () => {
               <CheckCircle size={20} className="text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{budgets.filter(b => b.status === 'approved').length}</p>
+              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'approved').length}</p>
               <p className="text-xs text-gray-500">Aprovados</p>
             </div>
           </div>
@@ -420,7 +527,7 @@ export const Orcamentos: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">
-                {formatCurrency(budgets.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.total, 0))}
+                {formatCurrency(filteredBudgets.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.total, 0))}
               </p>
               <p className="text-xs text-gray-500">Total Aprovado</p>
             </div>
@@ -430,17 +537,17 @@ export const Orcamentos: React.FC = () => {
 
       {/* Budgets List */}
       <div className="grid gap-4">
-        {budgets.length === 0 ? (
+        {filteredBudgets.length === 0 ? (
           <Card className="text-center py-10">
             <FileText size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orçamento</h3>
-            <p className="text-gray-500 mb-4">Crie seu primeiro orçamento</p>
-            <Button onClick={() => setShowNewModal(true)} icon={<Plus size={18} />}>
-              Criar Orçamento
+            <p className="text-gray-500 mb-4">Crie seu primeiro orcamento de {quoteTypeConfig[activeQuoteType].label.toLowerCase()}</p>
+            <Button onClick={() => { setQuoteType(activeQuoteType); setShowNewModal(true); }} icon={<Plus size={18} />}>
+              Criar Orcamento
             </Button>
           </Card>
         ) : (
-          budgets.map((budget) => (
+          filteredBudgets.map((budget) => (
             <Card key={budget.id} hover padding="none">
               <div className="p-5">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -449,6 +556,9 @@ export const Orcamentos: React.FC = () => {
                       <h3 className="font-semibold text-gray-900">{budget.leadName}</h3>
                       <Badge className={statusConfig[budget.status]?.color}>
                         {statusConfig[budget.status]?.label}
+                      </Badge>
+                      <Badge className="bg-gray-100 text-gray-700">
+                        {quoteTypeConfig[getBudgetType(budget)].label}
                       </Badge>
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -505,10 +615,28 @@ export const Orcamentos: React.FC = () => {
       <Modal
         isOpen={showNewModal}
         onClose={() => setShowNewModal(false)}
-        title="Novo Orçamento"
-        size="xl"
+        title={`Novo Orcamento de ${quoteTypeConfig[formData.quoteType].label}`}
+        size="full"
       >
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(['calhas', 'esquadrias'] as QuoteType[]).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setQuoteType(type)}
+                className={`rounded-lg border p-4 text-left transition-colors ${
+                  formData.quoteType === type
+                    ? 'border-red-600 bg-red-50 text-red-900'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <p className="font-semibold">{quoteTypeConfig[type].label}</p>
+                <p className="text-sm opacity-75">{quoteTypeConfig[type].description}</p>
+              </button>
+            ))}
+          </div>
+
           {/* Client Selection */}
           <Select
             label="Cliente *"
@@ -574,22 +702,26 @@ export const Orcamentos: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <Select
                   label="Produto"
-                  options={productOptions}
+                  options={currentPriceProductOptions}
                   value={priceForm.name}
-                  onChange={(e) => setPriceForm({ ...priceForm, name: e.target.value })}
+                  onChange={(e) => setPriceForm({ ...priceForm, name: e.target.value, category: categoryFromProduct(e.target.value) })}
                 />
-                <Select
-                  label="Espessura"
-                  options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
-                  value={priceForm.thickness}
-                  onChange={(e) => setPriceForm({ ...priceForm, thickness: e.target.value })}
-                />
-                <Select
-                  label="Corte"
-                  options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
-                  value={priceForm.cut}
-                  onChange={(e) => setPriceForm({ ...priceForm, cut: e.target.value })}
-                />
+                {formData.quoteType === 'calhas' && (
+                  <>
+                    <Select
+                      label="Espessura"
+                      options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
+                      value={priceForm.thickness}
+                      onChange={(e) => setPriceForm({ ...priceForm, thickness: e.target.value })}
+                    />
+                    <Select
+                      label="Corte"
+                      options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
+                      value={priceForm.cut}
+                      onChange={(e) => setPriceForm({ ...priceForm, cut: e.target.value })}
+                    />
+                  </>
+                )}
                 <Select
                   label="Cor"
                   options={colorOptions.map(value => ({ value, label: value }))}
@@ -650,9 +782,10 @@ export const Orcamentos: React.FC = () => {
             </h4>
 
             {/* Add Item Form */}
-            <div className="grid grid-cols-12 gap-3 mb-4 p-4 bg-gray-50 rounded-lg">
-              <div className="col-span-12 grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3">
+            <div className="mb-4 rounded-lg bg-gray-50 p-4">
+              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3">
                 <Select
+                  label="Tipo de valor"
                   options={[
                     { value: 'saved', label: 'Usar tabela' },
                     { value: 'manual', label: 'Valor manual' },
@@ -661,6 +794,7 @@ export const Orcamentos: React.FC = () => {
                   onChange={(e) => setNewItem({ ...newItem, priceMode: e.target.value as 'saved' | 'manual', priceItemId: '' })}
                 />
                 <Select
+                  label="Preco salvo"
                   options={[
                     { value: '', label: activePriceItems.length ? 'Escolha um preco salvo' : 'Nenhum preco salvo' },
                     ...activePriceItems.map(item => ({ value: item.id, label: `${item.name} - ${formatCurrency(item.unitPrice)}/${item.unit}` })),
@@ -670,63 +804,65 @@ export const Orcamentos: React.FC = () => {
                   disabled={newItem.priceMode !== 'saved' || activePriceItems.length === 0}
                 />
               </div>
-              <div className="col-span-12 sm:col-span-3">
+
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 <Select
-                  options={productOptions}
+                  label="Produto"
+                  options={currentProductOptions}
                   value={newItem.product}
-                  onChange={(e) => setNewItem({ ...newItem, product: e.target.value })}
+                  onChange={(e) => setNewItem({ ...newItem, product: e.target.value, category: categoryFromProduct(e.target.value) })}
                 />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
+                {formData.quoteType === 'calhas' && (
+                  <>
+                    <Select
+                      label="Espessura"
+                      options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
+                      value={newItem.thickness}
+                      onChange={(e) => setNewItem({ ...newItem, thickness: e.target.value })}
+                    />
+                    <Select
+                      label="Corte"
+                      options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
+                      value={newItem.cut}
+                      onChange={(e) => setNewItem({ ...newItem, cut: e.target.value })}
+                    />
+                  </>
+                )}
                 <Select
-                  options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
-                  value={newItem.thickness}
-                  onChange={(e) => setNewItem({ ...newItem, thickness: e.target.value })}
-                />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
-                <Select
-                  options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
-                  value={newItem.cut}
-                  onChange={(e) => setNewItem({ ...newItem, cut: e.target.value })}
-                />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
-                <Select
+                  label="Cor / acabamento"
                   options={colorOptions.map(value => ({ value, label: value }))}
                   value={newItem.color}
                   onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
                 />
               </div>
-              <div className="col-span-12 sm:col-span-3">
+
+              <div className="mt-3 grid grid-cols-1 xl:grid-cols-[1fr_120px_120px_160px_220px] gap-3">
                 <Input
-                  placeholder={buildMetalSheetDescription()}
+                  label="Descricao do item"
+                  placeholder={formData.quoteType === 'calhas' ? buildMetalSheetDescription() : 'Ex: Janela 2 folhas 1,20 x 1,00 com vidro incolor'}
                   value={newItem.description}
                   onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                 />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
                 <Input
+                  label="Qtd"
                   type="number"
-                  placeholder="Qtd"
                   value={newItem.quantity}
                   onChange={(e) => setNewItem({ ...newItem, quantity: Number(e.target.value) })}
                   min={1}
                 />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
                 <Select
+                  label="Un."
                   options={[
                     { value: 'm', label: 'm' },
                     { value: 'un', label: 'un' },
+                    { value: 'm2', label: 'm2' },
                     { value: 'kit', label: 'kit' },
                   ]}
                   value={newItem.unit}
                   onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
                 />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
                 <Input
+                  label="Valor unitario"
                   type="number"
                   placeholder="R$ Unit"
                   value={newItem.unitPrice || ''}
@@ -734,12 +870,12 @@ export const Orcamentos: React.FC = () => {
                   min={0}
                   step={0.01}
                 />
-              </div>
-              <div className="col-span-12 sm:col-span-6 flex items-end">
-                <Button type="button" onClick={handleAddItem} size="sm" className="w-full">
-                  <Plus size={18} />
-                  Adicionar item de calha
-                </Button>
+                <div className="flex items-end">
+                  <Button type="button" onClick={handleAddItem} className="w-full">
+                    <Plus size={18} />
+                    Adicionar item
+                  </Button>
+                </div>
               </div>
             </div>
             {/* Items List */}

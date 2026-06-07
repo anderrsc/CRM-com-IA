@@ -49,12 +49,12 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    full: 'max-w-6xl',
+    full: 'max-w-[min(1400px,calc(100vw-1.5rem))]',
   };
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-3 sm:p-4">
+      <div className="flex min-h-screen items-start justify-center p-3 sm:p-4">
         {/* Backdrop */}
         <div 
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-fadeIn"
@@ -85,7 +85,7 @@ export const Modal: React.FC<ModalProps> = ({
           )}
           
           {/* Content */}
-          <div className="p-4 sm:p-5 max-h-[calc(100vh-160px)] overflow-y-auto">
+          <div className="p-4 sm:p-5 max-h-[calc(100vh-110px)] overflow-y-auto">
             {children}
           </div>
         </div>
