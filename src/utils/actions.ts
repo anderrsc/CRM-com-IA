@@ -78,7 +78,14 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
   const discountAmount = budget.discountType === 'percentage'
     ? (budget.subtotal * budget.discount) / 100
     : budget.discount;
-  const qrUrl = settings?.pixKey
+  const accentColor = settings?.accentColor || '#b91c1c';
+  const secondaryColor = settings?.secondaryColor || '#111827';
+  const fontFamily = settings?.fontFamily || 'Arial';
+  const layoutStyle = settings?.layoutStyle || 'moderno';
+  const showQrCode = settings?.showQrCode !== false;
+  const showSignature = settings?.showSignature !== false;
+  const compact = layoutStyle === 'compacto';
+  const qrUrl = settings?.pixKey && showQrCode
     ? `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(settings.pixKey)}`
     : '';
 
@@ -99,9 +106,10 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
   <title>Orcamento ${escapeHtml(budget.leadName)}</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Arial, sans-serif; color: #111827; background: #f8fafc; }
-    .page { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 18mm; background: white; }
-    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 3px solid #b91c1c; padding-bottom: 18px; }
+    body { margin: 0; font-family: ${fontFamily}, Arial, sans-serif; color: ${secondaryColor}; background: #f8fafc; }
+    .page { position: relative; width: 210mm; min-height: 297mm; margin: 0 auto; padding: ${compact ? '13mm' : '18mm'}; background: white; overflow: hidden; }
+    .watermark { position: absolute; inset: 42% auto auto 12%; transform: rotate(-28deg); font-size: 56px; font-weight: 800; color: rgba(17,24,39,0.055); white-space: nowrap; pointer-events: none; }
+    .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: ${layoutStyle === 'classico' ? '1px' : '3px'} solid ${accentColor}; padding-bottom: ${compact ? '12px' : '18px'}; }
     .brand { display: flex; gap: 14px; align-items: center; }
     .logo { width: 64px; height: 64px; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 10px; }
     .logo-fallback { width: 64px; height: 64px; border-radius: 10px; background: #b91c1c; color: white; display: grid; place-items: center; font-size: 32px; font-weight: 800; }
@@ -109,8 +117,8 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
     h1 { font-size: 24px; }
     .muted { color: #6b7280; font-size: 13px; line-height: 1.5; }
     .quote-title { text-align: right; }
-    .quote-title h2 { color: #b91c1c; font-size: 24px; }
-    .block { margin-top: 20px; padding: 14px; border: 1px solid #e5e7eb; border-radius: 10px; }
+    .quote-title h2 { color: ${accentColor}; font-size: 24px; }
+    .block { margin-top: ${compact ? '12px' : '20px'}; padding: ${compact ? '10px' : '14px'}; border: 1px solid #e5e7eb; border-radius: ${layoutStyle === 'classico' ? '2px' : '10px'}; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
     th { background: #f3f4f6; text-align: left; color: #374151; }
@@ -118,7 +126,7 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
     td:nth-child(2), td:nth-child(3), td:nth-child(4), th:nth-child(2), th:nth-child(3), th:nth-child(4) { text-align: right; white-space: nowrap; }
     .totals { margin-left: auto; width: 340px; margin-top: 18px; }
     .line { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #e5e7eb; }
-    .total { font-size: 20px; font-weight: 800; color: #b91c1c; }
+    .total { font-size: 20px; font-weight: 800; color: ${accentColor}; }
     .pix { display: flex; align-items: center; gap: 14px; }
     .signature { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 54px; }
     .signature div { border-top: 1px solid #111827; padding-top: 8px; text-align: center; font-size: 13px; color: #374151; }
@@ -131,6 +139,7 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
 </head>
 <body>
   <main class="page">
+    ${settings?.watermarkText ? `<div class="watermark">${escapeHtml(settings.watermarkText)}</div>` : ''}
     <section class="header">
       <div class="brand">
         ${settings?.logoUrl ? `<img class="logo" src="${escapeHtml(settings.logoUrl)}" />` : '<div class="logo-fallback">M</div>'}
@@ -141,7 +150,7 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
         </div>
       </div>
       <div class="quote-title">
-        <h2>ORCAMENTO</h2>
+        <h2>ORCAMENTO DE CALHAS</h2>
         <p class="muted">#${budget.id.slice(0, 8).toUpperCase()}</p>
         <p class="muted">${new Date().toLocaleDateString('pt-BR')}</p>
       </div>
@@ -177,13 +186,13 @@ export const openBudgetPdf = (budget: Budget, settings?: QuoteSettings) => {
       </div>
     </section>
 
-    ${settings?.pixKey ? `<section class="block pix"><img src="${qrUrl}" width="112" height="112" /><div><h3>PIX</h3><p>${escapeHtml(settings.pixKey)}</p></div></section>` : ''}
+    ${settings?.pixKey ? `<section class="block pix">${qrUrl ? `<img src="${qrUrl}" width="112" height="112" />` : ''}<div><h3>PIX</h3><p>${escapeHtml(settings.pixKey)}</p></div></section>` : ''}
     ${budget.observations ? `<section class="block"><h3>Observacoes</h3><p>${escapeHtml(budget.observations)}</p></section>` : ''}
 
-    <section class="signature">
+    ${showSignature ? `<section class="signature">
       <div>Assinatura do cliente</div>
       <div>${escapeHtml(settings?.companyName || 'Marquinhos')}</div>
-    </section>
+    </section>` : ''}
 
     <p class="footer">${escapeHtml(settings?.footerText || '')}</p>
   </main>

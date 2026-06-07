@@ -139,8 +139,34 @@ export const Orcamentos: React.FC = () => {
   const currentProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
   const currentPriceProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
 
+  const gutterProductNames: Record<string, string> = {
+    'Calha Platibanda': 'CALHA DE PLATIBANDA',
+    'Calha Beiral': 'CALHA DE BEIRAL',
+    'Calha Coletora': 'CALHA COLETORA',
+    'Calha de Meio': 'CALHA DE MEIO',
+    'Rufo com Pingadeira': 'RUFO COM PINGADEIRA',
+    'Rufo Chapeu': 'RUFO CHAPEU',
+    'Rufo de Acabamento': 'RUFO DE ACABAMENTO',
+    'Pingadeira com Rufo': 'PINGADEIRA COM RUFO',
+    'Pingadeira de Muro': 'PINGADEIRA DE MURO',
+    'Pingadeira de Fechamento': 'PINGADEIRA DE FECHAMENTO',
+    'Linha de Acessorios': 'LINHA DE ACESSORIOS',
+    'Produto Avulso': 'PRODUTO',
+    'Manutencao': 'MANUTENCAO',
+    'Mao de Obra': 'MAO DE OBRA',
+    'Materiais de Pintura': 'MATERIAIS NECESSARIOS PARA PINTURA',
+    'Remocao e Reinstalacao de Telhas': 'MAO DE OBRA PARA REMOCAO E REINSTALACAO DE TELHAS',
+  };
+
+  const buildGutterItemName = (product: string, thickness: string, cut: string, color: string) => {
+    const baseName = gutterProductNames[product] || product.toUpperCase();
+    const category = categoryFromProduct(product);
+    if (category === 'instalacao') return baseName;
+    return `${baseName} EM ALUMÍNIO ${thickness}MM C/${cut}MM NA COR ${color.toUpperCase()}`;
+  };
+
   const buildMetalSheetDescription = () => {
-    return `${newItem.product} Aluminio ${newItem.thickness}mm C/${newItem.cut} ${newItem.color}`;
+    return buildGutterItemName(newItem.product, newItem.thickness, newItem.cut, newItem.color);
   };
 
   const buildPriceItemName = () => {
@@ -148,7 +174,7 @@ export const Orcamentos: React.FC = () => {
       return `${priceForm.name} ${priceForm.color}`.trim();
     }
 
-    return `${priceForm.name} Aluminio ${priceForm.thickness}mm C/${priceForm.cut} ${priceForm.color}`;
+    return buildGutterItemName(priceForm.name, priceForm.thickness, priceForm.cut, priceForm.color);
   };
 
   const categoryFromProduct = (product: string): BudgetItem['category'] => {
