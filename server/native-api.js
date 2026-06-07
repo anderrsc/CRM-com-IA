@@ -105,7 +105,7 @@ const server = http.createServer(async (req, res) => {
         send(res, 503, { error: 'Configure SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env' });
         return;
       }
-      send(res, 200, { user: await authenticateUser(supabaseRequest, body.email, body.password) });
+      send(res, 200, { user: await authenticateUser(supabaseRequest, body.login, body.password) });
       return;
     }
 

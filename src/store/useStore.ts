@@ -4,7 +4,6 @@ import {
   User, Lead, Visit, Budget, Production, Installation, MeasurementSheet, Subscription,
   KnowledgeItem, Notification, LeadStatus 
 } from '../types';
-import { mockLeads, mockVisits, mockBudgets, mockProductions, mockInstallations, mockKnowledge, mockUsers } from '../data/mockData';
 import { api } from '../services/api';
 
 const syncSave = <T extends { id: string }>(collection: string, item: T) => {
@@ -27,6 +26,9 @@ interface AppState {
   
   // Users
   users: User[];
+  addUser: (user: User & { password?: string }) => void;
+  updateUser: (id: string, updates: Partial<User> & { password?: string }) => void;
+  deleteUser: (id: string) => void;
 
   // Subscription
   subscription: Subscription;
@@ -113,14 +115,14 @@ export const useStore = create<AppState>()(
 
           set((state) => ({
             databaseHydrated: true,
-            leads: leads.length ? leads : state.leads,
-            visits: visits.length ? visits : state.visits,
-            budgets: budgets.length ? budgets : state.budgets,
-            productions: productions.length ? productions : state.productions,
-            installations: installations.length ? installations : state.installations,
-            knowledgeBase: knowledgeBase.length ? knowledgeBase : state.knowledgeBase,
+            leads,
+            visits,
+            budgets,
+            productions,
+            installations,
+            knowledgeBase,
             subscription: subscriptions[0] || state.subscription,
-            users: users.length ? users : state.users,
+            users,
           }));
         } catch (error) {
           console.warn('Banco indisponivel, usando dados locais', error);
@@ -132,25 +134,30 @@ export const useStore = create<AppState>()(
       currentUser: null,
       isAuthenticated: false,
       login: async (email: string, password: string) => {
-        try {
-          const { user } = await api.login(email, password);
-          set({ currentUser: user, isAuthenticated: true, users: [user] });
-          return true;
-        } catch (error) {
-          console.warn('Login via banco indisponivel, tentando modo demonstracao', error);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          const user = mockUsers.find(u => u.email === email);
-          if (user && password === '123456') {
-            set({ currentUser: user, isAuthenticated: true });
-            return true;
-          }
-        }
-        return false;
+        const { user } = await api.login(email, password);
+        set({ currentUser: user, isAuthenticated: true, users: [user] });
+        return true;
       },
       logout: () => set({ currentUser: null, isAuthenticated: false }),
       
       // Users
-      users: mockUsers,
+      users: [],
+      addUser: (user) => set((state) => {
+        syncSave('users', user);
+        const { password: _password, ...safeUser } = user;
+        return { users: [safeUser, ...state.users] };
+      }),
+      updateUser: (id, updates) => set((state) => {
+        const { password: newPassword, ...safeUpdates } = updates;
+        const users = state.users.map(user => user.id === id ? { ...user, ...safeUpdates } : user);
+        const updated = users.find(user => user.id === id);
+        if (updated) syncSave('users', { ...updated, password: newPassword });
+        return { users };
+      }),
+      deleteUser: (id) => set((state) => {
+        syncDelete('users', id);
+        return { users: state.users.filter(user => user.id !== id) };
+      }),
 
       // Subscription
       subscription: {
@@ -176,7 +183,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Leads
-      leads: mockLeads,
+      leads: [],
       addLead: (lead) => set((state) => {
         syncSave('leads', lead);
         return { leads: [lead, ...state.leads] };
@@ -199,7 +206,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Visits
-      visits: mockVisits,
+      visits: [],
       addVisit: (visit) => set((state) => {
         syncSave('visits', visit);
         return { visits: [visit, ...state.visits] };
@@ -228,7 +235,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Budgets
-      budgets: mockBudgets,
+      budgets: [],
       addBudget: (budget) => set((state) => {
         syncSave('budgets', budget);
         return { budgets: [budget, ...state.budgets] };
@@ -245,7 +252,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Productions
-      productions: mockProductions,
+      productions: [],
       addProduction: (production) => set((state) => {
         syncSave('productions', production);
         return { productions: [production, ...state.productions] };
@@ -258,7 +265,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Installations
-      installations: mockInstallations,
+      installations: [],
       addInstallation: (installation) => set((state) => {
         syncSave('installations', installation);
         return { installations: [installation, ...state.installations] };
@@ -271,7 +278,7 @@ export const useStore = create<AppState>()(
       }),
       
       // Knowledge Base
-      knowledgeBase: mockKnowledge,
+      knowledgeBase: [],
       addKnowledgeItem: (item) => set((state) => {
         syncSave('knowledgeBase', item);
         return { knowledgeBase: [item, ...state.knowledgeBase] };
@@ -305,18 +312,8 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'marquinhos-os-storage',
+      version: 3,
       partialize: (state) => ({
-        currentUser: state.currentUser,
-        isAuthenticated: state.isAuthenticated,
-        leads: state.leads,
-        visits: state.visits,
-        measurementSheets: state.measurementSheets,
-        subscription: state.subscription,
-        budgets: state.budgets,
-        productions: state.productions,
-        installations: state.installations,
-        knowledgeBase: state.knowledgeBase,
-        notifications: state.notifications,
         sidebarOpen: state.sidebarOpen,
       }),
     }

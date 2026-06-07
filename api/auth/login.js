@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   if (!requireSupabase(res, supabaseConfigured)) return;
 
   try {
-    const user = await authenticateUser(supabaseRequest, req.body?.email, req.body?.password);
+    const user = await authenticateUser(supabaseRequest, req.body?.login, req.body?.password);
     send(res, 200, { user });
   } catch (error) {
     send(res, error.statusCode || 500, { error: error.message });

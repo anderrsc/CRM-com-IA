@@ -72,7 +72,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const { supabaseRequest } = await import('./supabase.js');
-    res.json({ user: await authenticateUser(supabaseRequest, req.body?.email, req.body?.password) });
+    res.json({ user: await authenticateUser(supabaseRequest, req.body?.login, req.body?.password) });
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: error.message });
   }

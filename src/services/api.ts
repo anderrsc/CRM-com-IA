@@ -36,9 +36,9 @@ export interface WhatsAppInboxMessage {
 
 export const api = {
   health: () => request<ApiStatus>('/api/health'),
-  login: (email: string, password: string) => request<{ user: import('../types').User }>('/api/auth/login', {
+  login: (login: string, password: string) => request<{ user: import('../types').User }>('/api/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ login, password }),
   }),
   listData: <T>(collection: string) => request<T[]>(`/api/data/${collection}`),
   saveData: <T extends { id: string }>(collection: string, item: T) => request<T>(`/api/data/${collection}/${encodeURIComponent(item.id)}`, {

@@ -2,11 +2,10 @@
 
 Sistema CRM completo para esquadrias, aluminio, vidros e calhas.
 
-## Login de demonstracao
+## Login inicial ADM
 
 ```text
-admin@marquinhosos.com
-senha: 123456
+Use o login ADM inicial configurado na migration.
 ```
 
 ## Rodar localmente
@@ -25,7 +24,7 @@ npm run dev
 Abra: `http://127.0.0.1:5173`
 
 Para persistencia real de dados e login por senha, configure as credenciais do Supabase no `.env`.
-Sem Supabase, o app roda com fallback local/mock para demonstracao.
+O sistema nao carrega dados de teste: os cadastros comecam vazios e sao salvos no banco.
 
 ## Deploy no Vercel
 

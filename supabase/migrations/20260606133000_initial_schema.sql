@@ -186,15 +186,6 @@ create table if not exists public.whatsapp_inbox (
 );
 
 -- Tabela principal de armazenamento do CRM (coleção genérica)
-create table if not exists public.app_records (
-  collection text not null,
-  id text not null,
-  payload jsonb not null,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  primary key (collection, id)
-);
-
 -- ============================================================
 -- ÍNDICES
 -- ============================================================
@@ -207,7 +198,6 @@ create index if not exists productions_stage_idx on public.productions(current_s
 create index if not exists installations_date_idx on public.installations(installation_date);
 create index if not exists whatsapp_inbox_timestamp_idx on public.whatsapp_inbox(timestamp desc);
 create index if not exists whatsapp_inbox_status_idx on public.whatsapp_inbox(status);
-create index if not exists app_records_collection_idx on public.app_records(collection);
 
 -- ============================================================
 -- ROW LEVEL SECURITY
@@ -224,22 +214,12 @@ alter table public.knowledge_items enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.notifications enable row level security;
 alter table public.whatsapp_inbox enable row level security;
-alter table public.app_records enable row level security;
 
 -- ============================================================
 -- POLICIES (service_role bypassa RLS por padrão, mas as policies
 -- abaixo garantem acesso mesmo que o bypass seja desabilitado,
 -- e permitem leitura via anon key se necessário no futuro)
 -- ============================================================
-
--- app_records: acesso total via service_role (backend Vercel)
-drop policy if exists "service_role_all_app_records" on public.app_records;
-create policy "service_role_all_app_records"
-  on public.app_records
-  for all
-  to service_role
-  using (true)
-  with check (true);
 
 -- whatsapp_inbox
 drop policy if exists "service_role_all_whatsapp_inbox" on public.whatsapp_inbox;
@@ -346,10 +326,7 @@ create policy "service_role_all_notifications"
 
 insert into public.app_users (id, name, email, role, password_hash, phone, active, created_at)
 values
-  ('1', 'Marcos Silva', 'admin@marquinhosos.com', 'admin', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0001', true, '2024-01-01T00:00:00Z'),
-  ('2', 'Ana Santos', 'vendedor@marquinhosos.com', 'vendedor', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0002', true, '2024-01-15T00:00:00Z'),
-  ('3', 'Carlos Oliveira', 'producao@marquinhosos.com', 'producao', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0003', true, '2024-02-01T00:00:00Z'),
-  ('4', 'Roberto Lima', 'instalador@marquinhosos.com', 'instalador', 'pbkdf2_sha256$600000$marquinhos-demo$LnDqNkLhIo8gpz1tFCeFEW2tlh2C2uZ0U+Q5/7gr3Lg=', '(44) 99999-0004', true, '2024-02-15T00:00:00Z')
+  ('admin', 'Administrador', 'marquinhos2026', 'admin', 'pbkdf2_sha256$600000$OG4eH9fcBfA0qS_H8SZX_Q$7kLUxeHxKtDXa/bqG5yJWfgMw6TEUIRLoC5TrLJECIw=', null, true, now())
 on conflict (id) do nothing;
 
 insert into public.subscriptions (

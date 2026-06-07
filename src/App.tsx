@@ -18,6 +18,7 @@ import { Conhecimento } from './pages/Conhecimento';
 import { cn } from './utils/cn';
 import { copyText, downloadTextFile, formatCurrency } from './utils/actions';
 import { api, ApiStatus } from './services/api';
+import { UserRole } from './types';
 import { Badge } from './components/ui/Badge';
 import { Button } from './components/ui/Button';
 import { Input, Select, TextArea } from './components/ui/Input';
@@ -42,7 +43,9 @@ import {
   Download,
   AlertTriangle,
   CheckCircle2,
-  Users
+  Users,
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 
 const pageConfig: Record<string, { title: string; subtitle?: string }> = {
@@ -162,8 +165,15 @@ const App: React.FC = () => {
 
 // Settings Page Component
 const SettingsPage: React.FC = () => {
-  const { subscription, updateSubscription, users } = useStore();
+  const { subscription, updateSubscription, users, addUser, updateUser, deleteUser, currentUser } = useStore();
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    login: '',
+    password: '',
+    role: 'vendedor' as UserRole,
+    phone: '',
+  });
 
   useEffect(() => {
     api.health().then(setApiStatus).catch(() => setApiStatus(null));
@@ -240,6 +250,26 @@ const SettingsPage: React.FC = () => {
     toast.success('Cobranca gerada em arquivo');
   };
 
+  const handleCreateUser = () => {
+    if (!newUser.name.trim() || !newUser.login.trim() || !newUser.password.trim()) {
+      toast.error('Preencha nome, login e senha');
+      return;
+    }
+
+    addUser({
+      id: globalThis.crypto?.randomUUID?.() || `user-${Date.now()}`,
+      name: newUser.name.trim(),
+      email: newUser.login.trim().toLowerCase(),
+      password: newUser.password,
+      role: newUser.role,
+      phone: newUser.phone.trim() || undefined,
+      active: true,
+      createdAt: new Date(),
+    });
+    setNewUser({ name: '', login: '', password: '', role: 'vendedor', phone: '' });
+    toast.success('Usuario criado');
+  };
+
   const integrationStatus = (enabled?: boolean) => ({
     status: enabled ? 'Conectado' : 'Pendente',
     statusColor: enabled ? 'bg-green-500' : 'bg-amber-500',
@@ -286,6 +316,101 @@ const SettingsPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {currentUser?.role === 'admin' && (
+        <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="p-2.5 bg-gradient-to-br from-red-500 to-red-600 rounded-lg text-white">
+              <Users size={24} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">Usuarios do Sistema</h3>
+              <p className="text-gray-500">Crie logins, senhas e permissoes da equipe</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Nome"
+              value={newUser.name}
+              onChange={(event) => setNewUser((user) => ({ ...user, name: event.target.value }))}
+            />
+            <Input
+              label="Login"
+              value={newUser.login}
+              onChange={(event) => setNewUser((user) => ({ ...user, login: event.target.value }))}
+            />
+            <Input
+              label="Senha"
+              type="password"
+              value={newUser.password}
+              onChange={(event) => setNewUser((user) => ({ ...user, password: event.target.value }))}
+            />
+            <Select
+              label="Perfil"
+              value={newUser.role}
+              onChange={(event) => setNewUser((user) => ({ ...user, role: event.target.value as UserRole }))}
+              options={[
+                { value: 'vendedor', label: 'Vendedor' },
+                { value: 'producao', label: 'Producao' },
+                { value: 'instalador', label: 'Instalador' },
+                { value: 'admin', label: 'Admin' },
+              ]}
+            />
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
+              <Input
+                label="Telefone"
+                value={newUser.phone}
+                onChange={(event) => setNewUser((user) => ({ ...user, phone: event.target.value }))}
+              />
+              <div className="flex items-end">
+                <Button fullWidth onClick={handleCreateUser} icon={<UserPlus size={18} />}>
+                  Criar usuario
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 space-y-2">
+            {users.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
+                Nenhum usuario carregado do banco ainda.
+              </div>
+            ) : (
+              users.map((user) => (
+                <div key={user.id} className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900">{user.name}</p>
+                    <p className="text-sm text-gray-500">{user.email} - {user.role}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={user.active ? 'outline' : 'secondary'}
+                      onClick={() => updateUser(user.id, { active: !user.active })}
+                    >
+                      {user.active ? 'Desativar' : 'Ativar'}
+                    </Button>
+                    {user.id !== currentUser.id && (
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => {
+                          deleteUser(user.id);
+                          toast.success('Usuario removido');
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Remover
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Subscription Control */}
       <div className="bg-white rounded-lg p-5 shadow-sm border border-gray-200">

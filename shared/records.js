@@ -1,3 +1,5 @@
+import { hashPassword } from './auth.js';
+
 const dateOnly = (value) => {
   if (!value) return null;
   const date = new Date(value);
@@ -25,8 +27,9 @@ const maps = {
     toDb: (item) => ({
       id: item.id,
       name: item.name,
-      email: item.email,
+      email: String(item.email || '').trim().toLowerCase(),
       role: item.role,
+      password_hash: item.passwordHash,
       avatar: valueOrNull(item.avatar),
       phone: valueOrNull(item.phone),
       active: valueOrDefault(item.active, true),
@@ -349,7 +352,24 @@ export async function listRecords(supabaseRequest, collection) {
 
 export async function saveRecord(supabaseRequest, collection, id, item) {
   const map = getRecordMap(collection);
-  const payload = map.toDb({ ...item, id });
+  let record = { ...item, id };
+
+  if (collection === 'users') {
+    if (item.password) {
+      record.passwordHash = hashPassword(item.password);
+    } else {
+      const existing = await supabaseRequest(`${map.table}?id=eq.${encodeURIComponent(id)}&select=password_hash&limit=1`);
+      record.passwordHash = existing?.[0]?.password_hash;
+    }
+
+    if (!record.passwordHash) {
+      const error = new Error('Senha obrigatoria para criar usuario');
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const payload = map.toDb(record);
   const results = await supabaseRequest(`${map.table}?on_conflict=id`, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=representation' },

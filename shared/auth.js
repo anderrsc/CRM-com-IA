@@ -28,16 +28,23 @@ export function verifyPassword(password, storedHash) {
   return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
 }
 
-export async function authenticateUser(supabaseRequest, email, password) {
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-  if (!normalizedEmail || !password) {
-    const error = new Error('E-mail e senha sao obrigatorios');
+export function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('base64url');
+  const iterations = 600000;
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256').toString('base64');
+  return `pbkdf2_sha256$${iterations}$${salt}$${hash}`;
+}
+
+export async function authenticateUser(supabaseRequest, login, password) {
+  const normalizedLogin = String(login || '').trim().toLowerCase();
+  if (!normalizedLogin || !password) {
+    const error = new Error('Login e senha sao obrigatorios');
     error.statusCode = 400;
     throw error;
   }
 
   const rows = await supabaseRequest(
-    `app_users?email=eq.${encodeURIComponent(normalizedEmail)}&active=eq.true&select=*&limit=1`
+    `app_users?email=eq.${encodeURIComponent(normalizedLogin)}&active=eq.true&select=*&limit=1`
   );
   const user = rows?.[0];
 

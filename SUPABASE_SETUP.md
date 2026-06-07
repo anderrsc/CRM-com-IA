@@ -24,21 +24,15 @@ O script cria tabelas, indices, RLS, policies e dados iniciais.
 - `notifications` - notificacoes
 - `whatsapp_inbox` - mensagens recebidas pelo webhook do WhatsApp
 
-A tabela `app_records` permanece como compatibilidade, mas o CRM principal grava nas tabelas reais acima.
-
 ## 3. Login inicial
 
-Usuarios seedados:
+Usuario inicial:
 
 ```text
-admin@marquinhosos.com
-vendedor@marquinhosos.com
-producao@marquinhosos.com
-instalador@marquinhosos.com
+ADM inicial configurado na migration.
 ```
 
-Senha inicial de todos: `123456`
-
+Dentro da area ADM, crie os demais usuarios, senhas e perfis.
 As senhas ficam salvas como hash PBKDF2 em `app_users.password_hash`.
 
 ## 4. Credenciais para o Vercel
