@@ -1,5 +1,5 @@
 // User types
-export type UserRole = 'admin' | 'vendedor' | 'producao' | 'instalador';
+export type UserRole = 'admin' | 'gerente' | 'vendedor' | 'secretaria' | 'compras' | 'producao' | 'instalador';
 
 export interface User {
   id: string;
@@ -15,6 +15,9 @@ export interface User {
 // Lead/Client types
 export type LeadStatus = 
   | 'novo'
+  | 'primeiro_atendimento'
+  | 'qualificado'
+  | 'aguardando_medidas'
   | 'aguardando_info'
   | 'visita_agendada'
   | 'visita_realizada'
@@ -23,7 +26,9 @@ export type LeadStatus =
   | 'fechado'
   | 'producao'
   | 'instalacao'
-  | 'finalizado';
+  | 'pos_venda'
+  | 'finalizado'
+  | 'perdido';
 
 export type LeadOrigin = 'whatsapp' | 'instagram' | 'telefone' | 'indicacao' | 'site' | 'outro';
 export type UrgencyLevel = 'baixa' | 'media' | 'alta' | 'urgente';
@@ -46,6 +51,8 @@ export interface Lead {
   observations?: string;
   aiSummary?: string;
   assignedTo?: string;
+  potentialValue?: number;
+  lastInteractionAt?: Date;
   attachments: Attachment[];
   messages: Message[];
   createdAt: Date;
@@ -137,6 +144,62 @@ export interface BudgetItem {
   unit: string;
   unitPrice: number;
   total: number;
+  category?: 'calha' | 'rufo' | 'pingadeira' | 'esquadria' | 'vidro' | 'acessorio' | 'instalacao' | 'outro';
+  thickness?: string;
+  cut?: string;
+  color?: string;
+  priceSource?: 'saved' | 'manual';
+  priceItemId?: string;
+}
+
+export interface QuotePriceItem {
+  id: string;
+  name: string;
+  category: BudgetItem['category'];
+  thickness?: string;
+  cut?: string;
+  color?: string;
+  unit: string;
+  unitPrice: number;
+  active: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface QuoteSettings {
+  id: string;
+  companyName: string;
+  document: string;
+  logoUrl?: string;
+  phone?: string;
+  email?: string;
+  headerText: string;
+  footerText: string;
+  pixKey?: string;
+  defaultValidity: number;
+  defaultPaymentConditions: string;
+  updatedAt: Date;
+}
+
+export interface Purchase {
+  id: string;
+  leadId?: string;
+  leadName: string;
+  supplier: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  unitCost: number;
+  total: number;
+  paymentMethod: 'pix' | 'boleto' | 'cartao' | 'dinheiro' | 'transferencia' | 'outro';
+  purchasedBy: string;
+  purchasedAt: Date;
+  expectedAt?: Date;
+  receivedAt?: Date;
+  status: 'comprado' | 'recebido' | 'cancelado';
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Budget {

@@ -1,5 +1,5 @@
 -- ============================================================
--- Marquinhos OS CRM - Schema completo
+-- Marquinhos CRM - Schema completo
 -- Execute no SQL Editor do Supabase
 -- ============================================================
 
@@ -13,7 +13,7 @@ create table if not exists public.app_users (
   id text primary key,
   name text not null,
   email text not null unique,
-  role text not null check (role in ('admin', 'vendedor', 'producao', 'instalador')),
+  role text not null check (role in ('admin', 'gerente', 'vendedor', 'secretaria', 'compras', 'producao', 'instalador')),
   password_hash text not null,
   avatar text,
   phone text,
@@ -33,12 +33,14 @@ create table if not exists public.leads (
   zip_code text,
   origin text not null check (origin in ('whatsapp', 'instagram', 'telefone', 'indicacao', 'site', 'outro')),
   service text not null default 'A definir',
-  status text not null default 'novo' check (status in ('novo', 'aguardando_info', 'visita_agendada', 'visita_realizada', 'orcamento_enviado', 'negociacao', 'fechado', 'producao', 'instalacao', 'finalizado')),
+  status text not null default 'novo' check (status in ('novo', 'primeiro_atendimento', 'qualificado', 'aguardando_medidas', 'aguardando_info', 'visita_agendada', 'visita_realizada', 'orcamento_enviado', 'negociacao', 'fechado', 'producao', 'instalacao', 'pos_venda', 'finalizado', 'perdido')),
   urgency text not null default 'media' check (urgency in ('baixa', 'media', 'alta', 'urgente')),
   availability text,
   observations text,
   ai_summary text,
   assigned_to text,
+  potential_value numeric(12,2) not null default 0,
+  last_interaction_at timestamptz,
   attachments jsonb not null default '[]'::jsonb,
   messages jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
@@ -90,6 +92,56 @@ create table if not exists public.budgets (
   observations text,
   status text not null default 'draft' check (status in ('draft', 'sent', 'approved', 'rejected', 'expired')),
   sent_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_price_items (
+  id text primary key,
+  name text not null,
+  category text not null default 'outro' check (category in ('calha', 'rufo', 'pingadeira', 'esquadria', 'vidro', 'acessorio', 'instalacao', 'outro')),
+  thickness text,
+  cut text,
+  color text,
+  unit text not null default 'un',
+  unit_price numeric(12,2) not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.quote_settings (
+  id text primary key,
+  company_name text not null default 'Marquinhos',
+  document text not null default '',
+  logo_url text,
+  phone text,
+  email text,
+  header_text text not null default '',
+  footer_text text not null default '',
+  pix_key text,
+  default_validity integer not null default 15,
+  default_payment_conditions text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.purchases (
+  id text primary key,
+  lead_id text,
+  lead_name text not null default '',
+  supplier text not null,
+  item_name text not null,
+  quantity numeric(12,2) not null default 0,
+  unit text not null default 'un',
+  unit_cost numeric(12,2) not null default 0,
+  total numeric(12,2) not null default 0,
+  payment_method text not null default 'outro' check (payment_method in ('pix', 'boleto', 'cartao', 'dinheiro', 'transferencia', 'outro')),
+  purchased_by text not null,
+  purchased_at timestamptz not null default now(),
+  expected_at timestamptz,
+  received_at timestamptz,
+  status text not null default 'comprado' check (status in ('comprado', 'recebido', 'cancelado')),
+  notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -194,6 +246,11 @@ create index if not exists leads_status_idx on public.leads(status);
 create index if not exists leads_origin_idx on public.leads(origin);
 create index if not exists visits_date_idx on public.visits(visit_date);
 create index if not exists budgets_status_idx on public.budgets(status);
+create index if not exists quote_price_items_lookup_idx on public.quote_price_items(category, thickness, cut, color);
+create index if not exists quote_price_items_active_idx on public.quote_price_items(active);
+create index if not exists purchases_status_idx on public.purchases(status);
+create index if not exists purchases_lead_idx on public.purchases(lead_id);
+create index if not exists purchases_purchased_at_idx on public.purchases(purchased_at desc);
 create index if not exists productions_stage_idx on public.productions(current_stage);
 create index if not exists installations_date_idx on public.installations(installation_date);
 create index if not exists whatsapp_inbox_timestamp_idx on public.whatsapp_inbox(timestamp desc);
@@ -208,6 +265,9 @@ alter table public.leads enable row level security;
 alter table public.visits enable row level security;
 alter table public.measurement_sheets enable row level security;
 alter table public.budgets enable row level security;
+alter table public.quote_price_items enable row level security;
+alter table public.quote_settings enable row level security;
+alter table public.purchases enable row level security;
 alter table public.productions enable row level security;
 alter table public.installations enable row level security;
 alter table public.knowledge_items enable row level security;
@@ -275,6 +335,33 @@ create policy "service_role_all_budgets"
   using (true)
   with check (true);
 
+-- quote_price_items
+drop policy if exists "service_role_all_quote_price_items" on public.quote_price_items;
+create policy "service_role_all_quote_price_items"
+  on public.quote_price_items
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+-- quote_settings
+drop policy if exists "service_role_all_quote_settings" on public.quote_settings;
+create policy "service_role_all_quote_settings"
+  on public.quote_settings
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
+-- purchases
+drop policy if exists "service_role_all_purchases" on public.purchases;
+create policy "service_role_all_purchases"
+  on public.purchases
+  for all
+  to service_role
+  using (true)
+  with check (true);
+
 -- productions
 drop policy if exists "service_role_all_productions" on public.productions;
 create policy "service_role_all_productions"
@@ -335,9 +422,29 @@ insert into public.subscriptions (
   due_day, next_due_date, payment_method, notes
 )
 values (
-  'main', 'Marquinhos OS', '00.000.000/0001-00', 'financeiro@marquinhosos.com',
+  'main', 'Marquinhos', '00.000.000/0001-00', 'financeiro@marquinhos.com',
   'professional', 'trial', 297, 'monthly', 10,
   10, current_date + interval '7 days', 'pix',
   'Assinatura em periodo de implantacao.'
+)
+on conflict (id) do nothing;
+
+insert into public.quote_settings (
+  id, company_name, document, logo_url, phone, email, header_text, footer_text,
+  pix_key, default_validity, default_payment_conditions, updated_at
+)
+values (
+  'main',
+  'Marquinhos',
+  '00.000.000/0001-00',
+  null,
+  '(44) 99999-0000',
+  'contato@marquinhos.com',
+  'Orcamento profissional para fornecimento e instalacao.',
+  'Agradecemos a preferencia. Valores sujeitos a conferencia tecnica.',
+  null,
+  15,
+  '50% entrada + 50% na entrega',
+  now()
 )
 on conflict (id) do nothing;

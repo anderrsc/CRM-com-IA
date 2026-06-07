@@ -113,7 +113,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const newLeads = leads.filter(l => l.status === 'novo').length;
   const visitsToday = visits.filter(v => isToday(new Date(v.date))).length;
   const budgetsSent = budgets.filter(b => b.status === 'sent' || b.status === 'approved').length;
-  const closedDeals = leads.filter(l => ['fechado', 'producao', 'instalacao', 'finalizado'].includes(l.status)).length;
+  const closedDeals = leads.filter(l => ['fechado', 'producao', 'instalacao', 'pos_venda', 'finalizado'].includes(l.status)).length;
   const productionCount = productions.filter(p => p.currentStage !== 'finalizado').length;
   const conversionRate = leads.length > 0 ? ((closedDeals / leads.length) * 100).toFixed(1) : '0';
   const totalRevenue = budgets.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.total, 0);

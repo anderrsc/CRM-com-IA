@@ -12,6 +12,7 @@ import { Funil } from './pages/Funil';
 import { Agenda } from './pages/Agenda';
 import { Visitas } from './pages/Visitas';
 import { Orcamentos } from './pages/Orcamentos';
+import { Compras } from './pages/Compras';
 import { Producao } from './pages/Producao';
 import { Instalacao } from './pages/Instalacao';
 import { Conhecimento } from './pages/Conhecimento';
@@ -56,6 +57,7 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   agenda: { title: 'Agenda', subtitle: 'Visitas e compromissos' },
   visitas: { title: 'Fichas de Visita', subtitle: 'Gerar e imprimir fichas' },
   orcamentos: { title: 'Orçamentos', subtitle: 'Crie e envie orçamentos' },
+  compras: { title: 'Compras', subtitle: 'Materiais, fornecedores e recebimentos' },
   producao: { title: 'Produção', subtitle: 'Acompanhe a produção' },
   instalacao: { title: 'Instalação', subtitle: 'Gerenciar instalações' },
   conhecimento: { title: 'Base de Conhecimento', subtitle: 'Produtos e serviços' },
@@ -102,6 +104,8 @@ const App: React.FC = () => {
         return <Visitas />;
       case 'orcamentos':
         return <Orcamentos />;
+      case 'compras':
+        return <Compras />;
       case 'producao':
         return <Producao />;
       case 'instalacao':
@@ -217,7 +221,7 @@ const SettingsPage: React.FC = () => {
   const isOverdue = subscription.status === 'overdue' || daysToDue < 0;
 
   const buildChargeText = () => [
-    'COBRANCA DE ASSINATURA - Marquinhos OS',
+    'COBRANCA DE ASSINATURA - Marquinhos',
     '',
     `Cliente: ${subscription.customerName}`,
     `Documento: ${subscription.customerDocument}`,
@@ -301,10 +305,10 @@ const SettingsPage: React.FC = () => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[
-            { label: 'Nome', value: 'Marquinhos OS', icon: Building2 },
+            { label: 'Nome', value: 'Marquinhos', icon: Building2 },
             { label: 'CNPJ', value: '00.000.000/0001-00', icon: Shield },
             { label: 'Telefone', value: '(44) 99999-0000', icon: Phone },
-            { label: 'E-mail', value: 'contato@marquinhosos.com', icon: Mail },
+            { label: 'E-mail', value: 'contato@marquinhos.com', icon: Mail },
           ].map((item) => (
             <div key={item.label} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <div className="flex items-center gap-2 text-gray-400 mb-2">
@@ -351,7 +355,10 @@ const SettingsPage: React.FC = () => {
               value={newUser.role}
               onChange={(event) => setNewUser((user) => ({ ...user, role: event.target.value as UserRole }))}
               options={[
+                { value: 'gerente', label: 'Gerente' },
                 { value: 'vendedor', label: 'Vendedor' },
+                { value: 'secretaria', label: 'Secretaria' },
+                { value: 'compras', label: 'Compras' },
                 { value: 'producao', label: 'Producao' },
                 { value: 'instalador', label: 'Instalador' },
                 { value: 'admin', label: 'Admin' },

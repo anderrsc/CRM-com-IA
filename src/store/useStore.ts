@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
   User, Lead, Visit, Budget, Production, Installation, MeasurementSheet, Subscription,
-  KnowledgeItem, Notification, LeadStatus 
+  KnowledgeItem, Notification, LeadStatus, QuotePriceItem, QuoteSettings, Purchase
 } from '../types';
 import { api } from '../services/api';
 
@@ -56,6 +56,16 @@ interface AppState {
   addBudget: (budget: Budget) => void;
   updateBudget: (id: string, updates: Partial<Budget>) => void;
   deleteBudget: (id: string) => void;
+  quotePriceItems: QuotePriceItem[];
+  addQuotePriceItem: (item: QuotePriceItem) => void;
+  updateQuotePriceItem: (id: string, updates: Partial<QuotePriceItem>) => void;
+  deleteQuotePriceItem: (id: string) => void;
+  quoteSettings: QuoteSettings;
+  updateQuoteSettings: (updates: Partial<QuoteSettings>) => void;
+  purchases: Purchase[];
+  addPurchase: (purchase: Purchase) => void;
+  updatePurchase: (id: string, updates: Partial<Purchase>) => void;
+  deletePurchase: (id: string) => void;
   
   // Productions
   productions: Production[];
@@ -99,18 +109,28 @@ export const useStore = create<AppState>()(
             budgets,
             productions,
             installations,
+            measurementSheets,
             knowledgeBase,
             subscriptions,
             users,
+            notifications,
+            quotePriceItems,
+            quoteSettingsRows,
+            purchases,
           ] = await Promise.all([
             api.listData<Lead>('leads'),
             api.listData<Visit>('visits'),
             api.listData<Budget>('budgets'),
             api.listData<Production>('productions'),
             api.listData<Installation>('installations'),
+            api.listData<MeasurementSheet>('measurementSheets'),
             api.listData<KnowledgeItem>('knowledgeBase'),
             api.listData<Subscription & { id: string }>('subscriptions'),
             api.listData<User>('users'),
+            api.listData<Notification>('notifications'),
+            api.listData<QuotePriceItem>('quotePriceItems'),
+            api.listData<QuoteSettings>('quoteSettings'),
+            api.listData<Purchase>('purchases'),
           ]);
 
           set((state) => ({
@@ -120,9 +140,14 @@ export const useStore = create<AppState>()(
             budgets,
             productions,
             installations,
+            measurementSheets,
             knowledgeBase,
             subscription: subscriptions[0] || state.subscription,
             users,
+            notifications,
+            quotePriceItems,
+            quoteSettings: quoteSettingsRows[0] || state.quoteSettings,
+            purchases,
           }));
         } catch (error) {
           console.warn('Banco indisponivel, usando dados locais', error);
@@ -161,9 +186,9 @@ export const useStore = create<AppState>()(
 
       // Subscription
       subscription: {
-        customerName: 'Marquinhos OS',
+        customerName: 'Marquinhos',
         customerDocument: '00.000.000/0001-00',
-        customerEmail: 'financeiro@marquinhosos.com',
+        customerEmail: 'financeiro@marquinhos.com',
         plan: 'professional',
         status: 'trial',
         amount: 297,
@@ -195,7 +220,7 @@ export const useStore = create<AppState>()(
         return { leads };
       }),
       updateLeadStatus: (id, status) => set((state) => {
-        const leads = state.leads.map(l => l.id === id ? { ...l, status, updatedAt: new Date() } : l);
+        const leads = state.leads.map(l => l.id === id ? { ...l, status, lastInteractionAt: new Date(), updatedAt: new Date() } : l);
         const updated = leads.find(l => l.id === id);
         if (updated) syncSave('leads', updated);
         return { leads };
@@ -250,6 +275,55 @@ export const useStore = create<AppState>()(
         syncDelete('budgets', id);
         return { budgets: state.budgets.filter(b => b.id !== id) };
       }),
+      quotePriceItems: [],
+      addQuotePriceItem: (item) => set((state) => {
+        syncSave('quotePriceItems', item);
+        return { quotePriceItems: [item, ...state.quotePriceItems] };
+      }),
+      updateQuotePriceItem: (id, updates) => set((state) => {
+        const quotePriceItems = state.quotePriceItems.map(item => item.id === id ? { ...item, ...updates, updatedAt: new Date() } : item);
+        const updated = quotePriceItems.find(item => item.id === id);
+        if (updated) syncSave('quotePriceItems', updated);
+        return { quotePriceItems };
+      }),
+      deleteQuotePriceItem: (id) => set((state) => {
+        syncDelete('quotePriceItems', id);
+        return { quotePriceItems: state.quotePriceItems.filter(item => item.id !== id) };
+      }),
+      quoteSettings: {
+        id: 'main',
+        companyName: 'Marquinhos',
+        document: '00.000.000/0001-00',
+        logoUrl: '',
+        phone: '(44) 99999-0000',
+        email: 'contato@marquinhos.com',
+        headerText: 'Orcamento profissional para fornecimento e instalacao.',
+        footerText: 'Agradecemos a preferencia. Valores sujeitos a conferencia tecnica.',
+        pixKey: '',
+        defaultValidity: 15,
+        defaultPaymentConditions: '50% entrada + 50% na entrega',
+        updatedAt: new Date(),
+      },
+      updateQuoteSettings: (updates) => set((state) => {
+        const quoteSettings = { ...state.quoteSettings, ...updates, id: 'main', updatedAt: new Date() };
+        syncSave('quoteSettings', quoteSettings);
+        return { quoteSettings };
+      }),
+      purchases: [],
+      addPurchase: (purchase) => set((state) => {
+        syncSave('purchases', purchase);
+        return { purchases: [purchase, ...state.purchases] };
+      }),
+      updatePurchase: (id, updates) => set((state) => {
+        const purchases = state.purchases.map(purchase => purchase.id === id ? { ...purchase, ...updates, updatedAt: new Date() } : purchase);
+        const updated = purchases.find(purchase => purchase.id === id);
+        if (updated) syncSave('purchases', updated);
+        return { purchases };
+      }),
+      deletePurchase: (id) => set((state) => {
+        syncDelete('purchases', id);
+        return { purchases: state.purchases.filter(purchase => purchase.id !== id) };
+      }),
       
       // Productions
       productions: [],
@@ -296,13 +370,20 @@ export const useStore = create<AppState>()(
       
       // Notifications
       notifications: [],
-      addNotification: (notification) => set((state) => ({ 
-        notifications: [notification, ...state.notifications].slice(0, 50) 
-      })),
-      markNotificationRead: (id) => set((state) => ({
-        notifications: state.notifications.map(n => n.id === id ? { ...n, read: true } : n)
-      })),
-      clearNotifications: () => set({ notifications: [] }),
+      addNotification: (notification) => set((state) => {
+        syncSave('notifications', notification);
+        return { notifications: [notification, ...state.notifications].slice(0, 50) };
+      }),
+      markNotificationRead: (id) => set((state) => {
+        const notifications = state.notifications.map(n => n.id === id ? { ...n, read: true } : n);
+        const updated = notifications.find(n => n.id === id);
+        if (updated) syncSave('notifications', updated);
+        return { notifications };
+      }),
+      clearNotifications: () => set((state) => {
+        state.notifications.forEach((notification) => syncDelete('notifications', notification.id));
+        return { notifications: [] };
+      }),
       
       // UI State
       sidebarOpen: true,
@@ -311,7 +392,7 @@ export const useStore = create<AppState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
     }),
     {
-      name: 'marquinhos-os-storage',
+      name: 'marquinhos-storage',
       version: 3,
       partialize: (state) => ({
         sidebarOpen: state.sidebarOpen,

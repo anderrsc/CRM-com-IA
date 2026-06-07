@@ -49,6 +49,7 @@ export const CRM: React.FC = () => {
     origin: 'whatsapp' as LeadOrigin,
     service: '',
     urgency: 'media' as UrgencyLevel,
+    potentialValue: 0,
     availability: '',
     observations: '',
   });
@@ -81,6 +82,7 @@ export const CRM: React.FC = () => {
       origin: 'whatsapp',
       service: '',
       urgency: 'media',
+      potentialValue: 0,
       availability: '',
       observations: '',
     });
@@ -105,6 +107,7 @@ export const CRM: React.FC = () => {
       origin: lead.origin,
       service: lead.service,
       urgency: lead.urgency,
+      potentialValue: lead.potentialValue || 0,
       availability: lead.availability || '',
       observations: lead.observations || '',
     });
@@ -133,6 +136,7 @@ export const CRM: React.FC = () => {
         ...formData,
         zipCode: '',
         status: 'novo' as LeadStatus,
+        lastInteractionAt: new Date(),
         attachments: [],
         messages: [],
         createdAt: new Date(),
@@ -148,7 +152,7 @@ export const CRM: React.FC = () => {
   const handleWhatsApp = (lead: Lead) => {
     const ok = openWhatsApp(
       lead.phone,
-      `Olá, ${lead.name}! Aqui é da Marquinhos OS. Estou entrando em contato sobre: ${lead.service}.`
+      `Olá, ${lead.name}! Aqui é da Marquinhos. Estou entrando em contato sobre: ${lead.service}.`
     );
     if (!ok) toast.error('Telefone inválido para WhatsApp');
   };
@@ -161,18 +165,18 @@ export const CRM: React.FC = () => {
 
   const statusOptions = [
     { value: 'all', label: 'Todos os status' },
-    { value: 'novo', label: 'Novo' },
-    { value: 'aguardando_info', label: 'Aguardando Info' },
-    { value: 'visita_agendada', label: 'Visita Agendada' },
-    { value: 'visita_realizada', label: 'Visita Realizada' },
-    { value: 'orcamento_enviado', label: 'Orçamento Enviado' },
-    { value: 'negociacao', label: 'Negociação' },
+    { value: 'novo', label: 'Novo Lead' },
+    { value: 'primeiro_atendimento', label: 'Primeiro Atendimento' },
+    { value: 'qualificado', label: 'Qualificado' },
+    { value: 'aguardando_medidas', label: 'Aguardando Medidas' },
+    { value: 'orcamento_enviado', label: 'Em Orcamento' },
+    { value: 'negociacao', label: 'Negociacao' },
     { value: 'fechado', label: 'Fechado' },
-    { value: 'producao', label: 'Produção' },
-    { value: 'instalacao', label: 'Instalação' },
-    { value: 'finalizado', label: 'Finalizado' },
+    { value: 'producao', label: 'Producao' },
+    { value: 'instalacao', label: 'Instalacao' },
+    { value: 'pos_venda', label: 'Pos-venda' },
+    { value: 'perdido', label: 'Perdido' },
   ];
-
   const originOptions = [
     { value: 'all', label: 'Todas as origens' },
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -385,6 +389,14 @@ export const CRM: React.FC = () => {
               ]}
               value={formData.urgency}
               onChange={(e) => setFormData({ ...formData, urgency: e.target.value as UrgencyLevel })}
+            />
+            <Input
+              label="Valor potencial"
+              type="number"
+              min="0"
+              step="100"
+              value={formData.potentialValue}
+              onChange={(e) => setFormData({ ...formData, potentialValue: Number(e.target.value) })}
             />
             <Input
               label="Disponibilidade"

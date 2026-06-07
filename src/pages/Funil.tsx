@@ -49,17 +49,27 @@ interface Column {
 
 const columns: Column[] = [
   { id: 'novo', title: 'Novo Lead', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-600' },
-  { id: 'aguardando_info', title: 'Aguardando Info', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'visita_agendada', title: 'Visita Agendada', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'visita_realizada', title: 'Visita OK', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'orcamento_enviado', title: 'Orçamento', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'negociacao', title: 'Negociação', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'fechado', title: 'Fechado ✓', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'producao', title: 'Produção', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'instalacao', title: 'Instalação', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
-  { id: 'finalizado', title: 'Finalizado ★', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'primeiro_atendimento', title: 'Primeiro Atendimento', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'qualificado', title: 'Qualificado', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'aguardando_medidas', title: 'Aguardando Medidas', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'orcamento_enviado', title: 'Em Orcamento', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'negociacao', title: 'Negociacao', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'fechado', title: 'Fechado', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'producao', title: 'Producao', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'instalacao', title: 'Instalacao', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'pos_venda', title: 'Pos-venda', color: 'bg-red-500', bgColor: 'bg-red-50', gradient: 'from-red-500 to-red-500' },
+  { id: 'perdido', title: 'Perdido', color: 'bg-gray-500', bgColor: 'bg-gray-50', gradient: 'from-gray-600 to-gray-700' },
 ];
 
+const formatCurrencyShort = (value?: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value || 0);
+
+const formatLastInteraction = (value?: Date | string) => {
+  if (!value) return 'Sem interacao';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Sem interacao';
+  return date.toLocaleDateString('pt-BR');
+};
 // Lead Card Component
 interface LeadCardProps {
   lead: Lead;
@@ -86,7 +96,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
     stopDrag(event);
     const opened = openWhatsApp(
       lead.phone,
-      `Olá, ${lead.name}! Aqui é da Marquinhos OS. Estou entrando em contato sobre: ${lead.service}.`
+      `Olá, ${lead.name}! Aqui é da Marquinhos. Estou entrando em contato sobre: ${lead.service}.`
     );
     if (!opened) toast.error('Telefone inválido para WhatsApp');
   };
@@ -112,6 +122,12 @@ const LeadCard: React.FC<LeadCardProps> = ({
             <span className="font-semibold text-sm text-gray-900 truncate">{lead.name}</span>
           </div>
           <p className="text-xs text-gray-500 truncate mb-2">{lead.service}</p>
+          <div className="mb-2 grid grid-cols-2 gap-1 text-[11px] text-gray-500">
+            <span className="truncate">{lead.city || 'Cidade'}</span>
+            <span className="text-right font-semibold text-gray-700">{formatCurrencyShort(lead.potentialValue)}</span>
+            <span className="truncate capitalize">{lead.origin}</span>
+            <span className="text-right">{formatLastInteraction(lead.lastInteractionAt || lead.updatedAt)}</span>
+          </div>
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1 text-xs text-gray-400">
               <Phone size={10} />
@@ -356,7 +372,7 @@ export const Funil: React.FC = () => {
 
   // Stats
   const totalLeads = leads.length;
-  const closedLeads = leads.filter(l => ['fechado', 'producao', 'instalacao', 'finalizado'].includes(l.status)).length;
+  const closedLeads = leads.filter(l => ['fechado', 'producao', 'instalacao', 'pos_venda', 'finalizado'].includes(l.status)).length;
   const conversionRate = totalLeads > 0 ? ((closedLeads / totalLeads) * 100).toFixed(1) : '0';
   const negotiationLeads = leads.filter(l => l.status === 'negociacao').length;
 

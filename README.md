@@ -1,6 +1,9 @@
-# Marquinhos OS CRM
+# Marquinhos CRM
 
-Sistema CRM completo para esquadrias, aluminio, vidros e calhas.
+Sistema SaaS/CRM para esquadrias, aluminio, vidros, calhas, rufos e instalacao tecnica.
+
+Visao de produto: transformar o Marquinhos no Salesforce das Esquadrias.
+Roadmap completo em `SAAS_ROADMAP.md`.
 
 ## Login inicial ADM
 
@@ -67,6 +70,47 @@ Abra: `http://127.0.0.1:5173`
 Para persistencia real de dados e login por senha, configure as credenciais do Supabase no `.env`.
 O sistema nao carrega dados de teste: os cadastros comecam vazios e sao salvos no banco.
 
+
+## Deploy no Vercel
+
+1. Crie um projeto no Supabase.
+2. Execute a migration:
+
+```text
+supabase/migrations/20260606133000_initial_schema.sql
+```
+
+Se o banco ja foi criado antes, execute tambem a migration incremental:
+
+```text
+supabase/migrations/20260607093000_salesforce_pipeline_upgrade.sql
+supabase/migrations/20260607103000_quote_pricing_and_emission.sql
+supabase/migrations/20260607112000_purchases_and_quote_logo.sql
+```
+
+3. No Vercel, configure as variaveis de ambiente:
+
+| Variavel | Valor |
+|---|---|
+| `SUPABASE_URL` | URL do projeto Supabase |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key do Supabase |
+| `OPENAI_API_KEY` | chave OpenAI, opcional |
+| `OPENAI_MODEL` | `gpt-4o-mini` |
+| `WHATSAPP_GRAPH_VERSION` | `v23.0` |
+| `WHATSAPP_PHONE_NUMBER_ID` | phone number ID, opcional |
+| `WHATSAPP_TOKEN` | token WhatsApp, opcional |
+| `WHATSAPP_VERIFY_TOKEN` | token secreto do webhook |
+| `WHATSAPP_AUTO_REPLY` | `false` |
+
+Nao configure `VITE_API_BASE_URL` no Vercel. Em producao, o frontend usa `/api` no proprio dominio.
+
+Build settings:
+
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- Framework: Vite
+
+
 ## Estrutura de dados
 
 Os cadastros sao salvos em tabelas reais no Supabase:
@@ -103,6 +147,7 @@ Token de verificacao: mesmo valor de WHATSAPP_VERIFY_TOKEN
 | Agenda | Calendario de visitas |
 | Fichas de Visita | Geracao e impressao de fichas |
 | Orcamentos | Criacao e envio de orcamentos |
+| Compras | Materiais, fornecedores, valores e recebimentos |
 | Producao | Acompanhamento de ordens de producao |
 | Instalacao | Gerenciamento de instalacoes |
 | Base de Conhecimento | Catalogo de produtos e servicos |

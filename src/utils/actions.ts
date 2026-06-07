@@ -1,4 +1,4 @@
-import { Budget, Visit } from '../types';
+import { Budget, QuoteSettings, Visit } from '../types';
 
 export const onlyDigits = (value: string) => value.replace(/\D/g, '');
 
@@ -66,7 +66,7 @@ export const downloadTextFile = (filename: string, content: string) => {
 export const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-export const buildBudgetText = (budget: Budget) => {
+export const buildBudgetText = (budget: Budget, settings?: QuoteSettings) => {
   const items = budget.items
     .map((item) => `- ${item.description}: ${item.quantity} ${item.unit} x ${formatCurrency(item.unitPrice)} = ${formatCurrency(item.total)}`)
     .join('\n');
@@ -76,7 +76,12 @@ export const buildBudgetText = (budget: Budget) => {
     : budget.discount;
 
   return [
-    'ORCAMENTO - Marquinhos OS',
+    `ORCAMENTO - ${settings?.companyName || 'Marquinhos'}`,
+    settings?.logoUrl ? `Logo: ${settings.logoUrl}` : '',
+    settings?.document ? `Documento: ${settings.document}` : '',
+    settings?.phone ? `Telefone: ${settings.phone}` : '',
+    settings?.email ? `E-mail: ${settings.email}` : '',
+    settings?.headerText ? `\n${settings.headerText}` : '',
     '',
     `Cliente: ${budget.leadName}`,
     `Numero: ${budget.id.slice(0, 8).toUpperCase()}`,
@@ -92,12 +97,14 @@ export const buildBudgetText = (budget: Budget) => {
     '',
     `Validade: ${budget.validity} dias`,
     `Pagamento: ${budget.paymentConditions}`,
+    settings?.pixKey ? `PIX: ${settings.pixKey}` : '',
     budget.observations ? `Observacoes: ${budget.observations}` : '',
+    settings?.footerText ? `\n${settings.footerText}` : '',
   ].filter(Boolean).join('\n');
 };
 
 export const buildVisitText = (visit: Visit) => [
-  'FICHA DE VISITA - Marquinhos OS',
+  'FICHA DE VISITA - Marquinhos',
   '',
   `Cliente: ${visit.leadName}`,
   `Telefone: ${visit.phone}`,

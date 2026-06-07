@@ -290,7 +290,7 @@ export const Visitas: React.FC = () => {
                       M
                     </div>
                     <div>
-                      <h1 className="text-xl font-bold text-gray-900">Marquinhos OS</h1>
+                      <h1 className="text-xl font-bold text-gray-900">Marquinhos</h1>
                       <p className="text-sm text-gray-500">Esquadrias • Alumínio • Vidros • Calhas</p>
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export const Visitas: React.FC = () => {
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
                       <CheckCircle size={16} className="text-red-500" />
-                      <span>Gerado automaticamente por Marquinhos OS</span>
+                      <span>Gerado automaticamente por Marquinhos</span>
                     </div>
                     <span>{format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
                   </div>

@@ -18,7 +18,7 @@ const syncSnippet = `
 <script>
 (function () {
   var apiBase = 'http://127.0.0.1:8787';
-  var storageKey = 'marquinhos-os-storage';
+  var storageKey = 'marquinhos-storage';
   var collections = ['leads', 'visits', 'measurementSheets', 'budgets', 'productions', 'installations', 'knowledgeBase'];
 
   function readState() {
@@ -122,5 +122,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`Marquinhos OS aberto em http://127.0.0.1:${port}`);
+  console.log(`Marquinhos aberto em http://127.0.0.1:${port}`);
 });

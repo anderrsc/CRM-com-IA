@@ -38,7 +38,7 @@ const stageConfig: Record<ProductionStage, { label: string; icon: React.ElementT
 const stages: ProductionStage[] = ['corte', 'montagem', 'vidro', 'pintura', 'embalagem', 'finalizado'];
 
 export const Producao: React.FC = () => {
-  const { productions, updateProduction, users, leads, installations, addInstallation, updateLeadStatus, addNotification } = useStore();
+  const { productions, purchases, updateProduction, users, leads, installations, addInstallation, updateLeadStatus, addNotification } = useStore();
   const [selectedProduction, setSelectedProduction] = useState<Production | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
@@ -119,6 +119,9 @@ export const Producao: React.FC = () => {
   // Stats
   const inProgressCount = productions.filter(p => p.currentStage !== 'finalizado').length;
   const completedCount = productions.filter(p => p.currentStage === 'finalizado').length;
+  const receivedPurchases = purchases
+    .filter((purchase) => purchase.status === 'recebido')
+    .slice(0, 5);
 
   return (
     <div className="space-y-5 animate-fadeIn">
@@ -171,6 +174,31 @@ export const Producao: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {receivedPurchases.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Materiais recebidos"
+            subtitle="Itens que chegaram e ja podem ser usados na producao"
+            icon={<Package size={20} />}
+          />
+          <div className="grid gap-2">
+            {receivedPurchases.map((purchase) => (
+              <div key={purchase.id} className="flex flex-col gap-1 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-gray-900">{purchase.itemName}</p>
+                  <p className="text-sm text-gray-500">
+                    {purchase.quantity} {purchase.unit} - {purchase.supplier} - {purchase.leadName}
+                  </p>
+                </div>
+                <Badge variant="success">
+                  Chegou {purchase.receivedAt ? new Date(purchase.receivedAt).toLocaleDateString('pt-BR') : ''}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Stage Pipeline */}
       <Card>
