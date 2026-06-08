@@ -1,18 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { 
-  Printer, 
-  MapPin, 
-  Phone, 
-  Calendar,
-  Clock,
-  User,
-  FileText,
-  Download,
-  MessageSquare,
-  Navigation,
-  CheckCircle
-} from 'lucide-react';
-import { Card, CardHeader } from '../components/ui/Card';
+import React, { useEffect, useState } from 'react';
+import { Printer, MapPin, Phone, Calendar, Clock, User, FileText, Download, MessageSquare, Navigation, CheckCircle, Plus, Trash2, ChevronLeft, ArrowRight, Save, Eye } from 'lucide-react';
+import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Input, TextArea } from '../components/ui/Input';
@@ -25,543 +13,197 @@ import toast from 'react-hot-toast';
 import { buildVisitText, downloadTextFile, openMap, openWhatsApp } from '../utils/actions';
 import { v4 as uuidv4 } from 'uuid';
 
+type View = 'list' | 'ficha';
+
 export const Visitas: React.FC = () => {
   const { visits, measurementSheets, saveMeasurementSheet, leads, users, currentUser } = useStore();
+  const [view, setView] = useState<View>('list');
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [measurementSheet, setMeasurementSheet] = useState<MeasurementSheet | null>(null);
-  const printRef = useRef<HTMLDivElement>(null);
 
   const pendingVisits = visits.filter(v => v.status === 'agendada');
 
   useEffect(() => {
-    if (!selectedVisit) {
-      setMeasurementSheet(null);
-      return;
-    }
-
-    const saved = measurementSheets.find((sheet) => sheet.visitId === selectedVisit.id);
+    if (!selectedVisit) return;
+    const saved = measurementSheets.find(s => s.visitId === selectedVisit.id);
     setMeasurementSheet(saved || {
-      id: uuidv4(),
-      visitId: selectedVisit.id,
-      leadId: selectedVisit.leadId,
-      leadName: selectedVisit.leadName,
-      service: selectedVisit.service,
+      id: uuidv4(), visitId: selectedVisit.id, leadId: selectedVisit.leadId,
+      leadName: selectedVisit.leadName, service: selectedVisit.service,
       lines: [
-        { id: uuidv4(), location: 'Ambiente 1', width: '', height: '', depth: '', quantity: 1, notes: '' },
-        { id: uuidv4(), location: 'Ambiente 2', width: '', height: '', depth: '', quantity: 1, notes: '' },
+        { id: uuidv4(), location: 'Fachada Principal', width: '', height: '', depth: '', quantity: 1, notes: '' },
+        { id: uuidv4(), location: 'Lateral Direita', width: '', height: '', depth: '', quantity: 1, notes: '' },
+        { id: uuidv4(), location: 'Lateral Esquerda', width: '', height: '', depth: '', quantity: 1, notes: '' },
+        { id: uuidv4(), location: 'Fundos', width: '', height: '', depth: '', quantity: 1, notes: '' },
       ],
-      generalNotes: '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      generalNotes: '', createdAt: new Date(), updatedAt: new Date(),
     });
-  }, [measurementSheets, selectedVisit]);
+  }, [selectedVisit, measurementSheets]);
 
-  const updateMeasurementLine = (lineId: string, field: string, value: string | number) => {
+  const updateLine = (lineId: string, field: string, value: string | number) => {
     if (!measurementSheet) return;
-
-    setMeasurementSheet({
-      ...measurementSheet,
-      lines: measurementSheet.lines.map((line) => line.id === lineId ? { ...line, [field]: value } : line),
-      updatedAt: new Date(),
-    });
+    setMeasurementSheet({ ...measurementSheet, lines: measurementSheet.lines.map(l => l.id === lineId ? { ...l, [field]: value } : l), updatedAt: new Date() });
   };
-
-  const addMeasurementLine = () => {
+  const addLine = () => {
     if (!measurementSheet) return;
-
-    setMeasurementSheet({
-      ...measurementSheet,
-      lines: [
-        ...measurementSheet.lines,
-        { id: uuidv4(), location: `Ambiente ${measurementSheet.lines.length + 1}`, width: '', height: '', depth: '', quantity: 1, notes: '' },
-      ],
-      updatedAt: new Date(),
-    });
+    setMeasurementSheet({ ...measurementSheet, lines: [...measurementSheet.lines, { id: uuidv4(), location: `Ambiente ${measurementSheet.lines.length + 1}`, width: '', height: '', depth: '', quantity: 1, notes: '' }], updatedAt: new Date() });
   };
-
+  const removeLine = (lineId: string) => {
+    if (!measurementSheet) return;
+    setMeasurementSheet({ ...measurementSheet, lines: measurementSheet.lines.filter(l => l.id !== lineId), updatedAt: new Date() });
+  };
   const saveMeasurements = () => {
     if (!measurementSheet) return;
     saveMeasurementSheet({ ...measurementSheet, updatedAt: new Date() });
-    toast.success('Folha de medições salva');
+    toast.success('Folha de medicoes salva no sistema!');
   };
+  const openVisit = (visit: Visit) => { setSelectedVisit(visit); setView('ficha'); };
 
   const handlePrint = () => {
-    if (!selectedVisit) return;
-    window.print();
+    if (!selectedVisit || !measurementSheet) return;
+    const lead = leads.find(l => l.id === selectedVisit.leadId);
+    const medidor = users.find(u => u.id === selectedVisit.assignedTo)?.name || currentUser?.name || 'Tecnico';
+    const tipo = /esquadr|janela|porta|box|vidro/i.test(selectedVisit.service) ? 'ESQUADRIAS' : 'CALHAS';
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>Ficha ${selectedVisit.leadName}</title>
+<style>@page{margin:10mm 12mm;size:A4}*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}body{font-size:11px;color:#111}.header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #dc2626;padding-bottom:8px;margin-bottom:10px}.logo{width:44px;height:44px;background:linear-gradient(135deg,#dc2626,#991b1b);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:900}table{width:100%;border-collapse:collapse;margin-bottom:10px}thead{background:#1a1a2e;color:#fff}thead th{padding:7px 8px;font-size:10px;font-weight:700;text-align:left}tbody tr{border-bottom:1px solid #f0f0f0}tbody td{padding:8px;font-size:11px}.sig{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:15px;border-top:1px solid #cbd5e1;padding-top:12px}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+<div class="header"><div style="display:flex;align-items:center"><div class="logo">M</div><div style="margin-left:10px"><h1 style="font-size:16px;font-weight:900">Marquinhos</h1><p style="font-size:10px;color:#555">Calhas · Esquadrias · Aluminio</p></div></div>
+<div style="text-align:right"><h2 style="font-size:18px;font-weight:900;color:#dc2626">FICHA DE MEDICAO · ${tipo}</h2><p style="font-size:10px;color:#777">N ${selectedVisit.id.slice(0,8).toUpperCase()} · ${format(new Date(selectedVisit.date),'dd/MM/yyyy',{locale:ptBR})} as ${selectedVisit.time}</p></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;background:#f9fafb"><label style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;display:block;margin-bottom:3px">Cliente</label><p style="font-size:12px;font-weight:600">${selectedVisit.leadName}</p><p style="font-size:10px">${selectedVisit.phone||''}</p></div>
+<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;background:#f9fafb"><label style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;display:block;margin-bottom:3px">Endereco</label><p style="font-size:12px;font-weight:600">${lead?.address||selectedVisit.address||''}</p><p style="font-size:10px">${lead?.city||''}</p></div>
+<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;background:#f9fafb"><label style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;display:block;margin-bottom:3px">Servico</label><p style="font-size:12px;font-weight:600">${selectedVisit.service}</p></div>
+<div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;background:#f9fafb"><label style="font-size:9px;font-weight:700;text-transform:uppercase;color:#9ca3af;display:block;margin-bottom:3px">Tecnico</label><p style="font-size:12px;font-weight:600">${medidor}</p></div></div>
+<table><thead><tr><th style="width:180px">Ambiente / Local</th><th style="text-align:center;width:80px">Largura(m)</th><th style="text-align:center;width:80px">Altura(m)</th><th style="text-align:center;width:80px">Prof(m)</th><th style="text-align:center;width:55px">Qtd</th><th>Obs</th></tr></thead><tbody>
+${measurementSheet.lines.map(l=>`<tr><td>${l.location||''}</td><td style="text-align:center">${l.width||'___'}</td><td style="text-align:center">${l.height||'___'}</td><td style="text-align:center">${l.depth||'___'}</td><td style="text-align:center">${l.quantity||1}</td><td>${l.notes||''}</td></tr>`).join('')}
+</tbody></table>
+<div style="border:1px solid #e5e7eb;border-radius:6px;padding:10px;min-height:60px;background:#fffbeb;margin-bottom:16px"><p style="font-size:10px;font-weight:700;margin-bottom:4px">OBSERVACOES GERAIS:</p><p style="font-size:11px">${measurementSheet.generalNotes||''}</p></div>
+<div class="sig"><div><div style="font-size:10px;color:#94a3b8;margin-bottom:28px">Assinatura do Tecnico</div><div style="border-top:1px solid #374151;width:200px;padding-top:4px;font-size:10px">${medidor}</div></div>
+<div><div style="font-size:10px;color:#94a3b8;margin-bottom:28px">Assinatura do Cliente</div><div style="border-top:1px solid #374151;width:200px;padding-top:4px;font-size:10px">${selectedVisit.leadName}</div></div></div>
+<p style="text-align:center;font-size:9px;color:#9ca3af;margin-top:8px;border-top:1px solid #e5e7eb;padding-top:6px">Marquinhos Calhas · Jaraguá do Sul - SC</p>
+</body></html>`;
+    const win = window.open('','_blank');
+    if(!win){toast.error('Permita pop-ups');return;}
+    win.document.write(html); win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
   };
 
-  const handleWhatsApp = () => {
-    if (!selectedVisit) return;
-    const ok = openWhatsApp(selectedVisit.phone, buildVisitText(selectedVisit));
-    if (!ok) toast.error('Telefone inválido para WhatsApp');
-  };
-
-  const handleOpenMap = () => {
-    if (!selectedVisit) return;
-    const ok = openMap(selectedVisit.address);
-    if (!ok) toast.error('Endereço não informado');
-  };
-
+  const handleWhatsApp = () => { if(!selectedVisit) return; openWhatsApp(selectedVisit.phone, buildVisitText(selectedVisit)); };
   const handleDownload = () => {
-    if (!selectedVisit) return;
-    const measurements = measurementSheet
-      ? [
-          '',
-          'MEDICOES',
-          ...measurementSheet.lines.map((line) =>
-            `${line.location}: L ${line.width || '-'} x A ${line.height || '-'} x P ${line.depth || '-'} | Qtd ${line.quantity} | ${line.notes || ''}`
-          ),
-          measurementSheet.generalNotes ? `Observacoes gerais: ${measurementSheet.generalNotes}` : '',
-        ].filter(Boolean).join('\n')
-      : '';
-    downloadTextFile(`ficha-visita-${selectedVisit.id.slice(0, 8)}.txt`, `${buildVisitText(selectedVisit)}${measurements}`);
-    toast.success('Ficha de visita baixada');
+    if(!selectedVisit||!measurementSheet) return;
+    const lines = measurementSheet.lines.map(l=>`${l.location}: L=${l.width||'-'} A=${l.height||'-'} P=${l.depth||'-'} Qtd=${l.quantity} ${l.notes?'| '+l.notes:''}`).join('\n');
+    downloadTextFile(`ficha-${selectedVisit.leadName.replace(/\s+/g,'-')}.txt`,`${buildVisitText(selectedVisit)}\n\nMEDICOES:\n${lines}`);
+    toast.success('Arquivo baixado');
   };
+  const formatDate = (v?: Date|string) => { if(!v) return '-'; const d=new Date(v); return isNaN(d.getTime())?'-':format(d,'dd/MM/yyyy',{locale:ptBR}); };
 
-  const formatDateSafe = (value?: Date | string) => {
-    if (!value) return 'A definir';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'A definir';
-    return format(date, 'dd/MM/yyyy', { locale: ptBR });
-  };
-
-  const selectedLead = selectedVisit ? leads.find((lead) => lead.id === selectedVisit.leadId) : null;
-  const measurerName = selectedVisit
-    ? users.find((user) => user.id === selectedVisit.assignedTo)?.name || selectedVisit.assignedTo || currentUser?.name || 'A definir'
-    : 'A definir';
-  const visitKind = selectedVisit && /esquadr|janela|porta|box|vidro/i.test(selectedVisit.service)
-    ? 'ESQUADRIAS'
-    : 'CALHAS';
-  const fullAddress = selectedVisit
-    ? [
-        selectedLead?.address || selectedVisit.address,
-        selectedLead?.neighborhood ? `Bairro ${selectedLead.neighborhood}` : '',
-        selectedLead?.city ? `${selectedLead.city}${selectedLead.state ? ` - ${selectedLead.state}` : ''}` : '',
-        selectedLead?.zipCode ? `CEP ${selectedLead.zipCode}` : '',
-      ].filter(Boolean).join(' | ')
-    : '';
-  const reference = selectedVisit
-    ? selectedLead?.observations || selectedVisit.observations || 'Sem referencia informada'
-    : 'Sem referencia informada';
-  const availability = selectedVisit
-    ? selectedLead?.availability || selectedVisit.time || 'A definir'
-    : 'A definir';
+  if (view === 'ficha' && selectedVisit && measurementSheet) {
+    const lead = leads.find(l => l.id === selectedVisit.leadId);
+    const medidor = users.find(u => u.id === selectedVisit.assignedTo)?.name || currentUser?.name || 'Tecnico';
+    const isSaved = measurementSheets.some(s => s.visitId === selectedVisit.id);
+    return (
+      <div className="animate-fadeIn space-y-5">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setView('list'); setSelectedVisit(null); }} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <ChevronLeft size={18}/> Voltar para Fichas
+          </button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={handleWhatsApp} icon={<MessageSquare size={15}/>}>WhatsApp</Button>
+            <Button size="sm" variant="ghost" onClick={() => openMap(selectedVisit.address)} icon={<Navigation size={15}/>}>Mapa</Button>
+            <Button size="sm" variant="outline" onClick={handleDownload} icon={<Download size={15}/>}>Baixar</Button>
+            <Button size="sm" variant="secondary" onClick={handlePrint} icon={<Printer size={15}/>}>Imprimir</Button>
+            <Button size="sm" onClick={saveMeasurements} icon={<Save size={15}/>}>{isSaved ? 'Atualizar' : 'Salvar Medicoes'}</Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[{label:'Cliente',value:selectedVisit.leadName,icon:<User size={16}/>},{label:'Telefone',value:selectedVisit.phone||'-',icon:<Phone size={16}/>},{label:'Data',value:`${formatDate(selectedVisit.date)} as ${selectedVisit.time}`,icon:<Calendar size={16}/>},{label:'Servico',value:selectedVisit.service,icon:<FileText size={16}/>}].map(item=>(
+            <div key={item.label} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div className="flex items-center gap-2 text-gray-400 mb-1">{item.icon}<span className="text-xs font-semibold uppercase tracking-wide">{item.label}</span></div>
+              <p className="font-semibold text-gray-900 text-sm">{item.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-1"><MapPin size={16} className="text-red-500"/><span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Endereco</span></div>
+          <p className="font-medium text-gray-900">{lead?.address||selectedVisit.address||'-'}{lead?.neighborhood?` · ${lead.neighborhood}`:''}{lead?.city?` · ${lead.city}${lead.state?`/${lead.state}`:''}`:''}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50">
+            <div><h3 className="font-bold text-gray-900">Folha de Medicoes</h3><p className="text-xs text-gray-500 mt-0.5">Tecnico: {medidor} · {measurementSheet.lines.length} ambientes</p></div>
+            <div className="flex items-center gap-2">
+              {isSaved&&<span className="flex items-center gap-1 text-xs text-green-600 font-medium"><CheckCircle size={14}/> Salvo</span>}
+              <Button size="sm" variant="outline" onClick={addLine} icon={<Plus size={14}/>}>Adicionar linha</Button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-800 text-white">
+                <tr><th className="text-left px-4 py-3 font-semibold w-48">Ambiente</th><th className="text-center px-3 py-3 font-semibold w-28">Largura(m)</th><th className="text-center px-3 py-3 font-semibold w-28">Altura(m)</th><th className="text-center px-3 py-3 font-semibold w-28">Prof(m)</th><th className="text-center px-3 py-3 font-semibold w-20">Qtd</th><th className="text-left px-4 py-3 font-semibold">Obs</th><th className="px-3 py-3 w-12"></th></tr>
+              </thead>
+              <tbody>
+                {measurementSheet.lines.map((line,idx)=>(
+                  <tr key={line.id} className={cn('border-t border-gray-100',idx%2===1&&'bg-gray-50/50')}>
+                    <td className="px-4 py-2.5"><input value={line.location} onChange={e=>updateLine(line.id,'location',e.target.value)} className="w-full bg-transparent border-b border-gray-200 focus:border-red-400 outline-none text-sm font-medium py-0.5"/></td>
+                    {(['width','height','depth'] as const).map(field=>(<td key={field} className="px-3 py-2.5 text-center"><input type="number" step="0.01" min="0" value={line[field]} onChange={e=>updateLine(line.id,field,e.target.value)} placeholder="0,00" className="w-24 text-center bg-transparent border border-gray-200 rounded-lg focus:border-red-400 focus:ring-1 focus:ring-red-200 outline-none text-sm py-1.5 px-2"/></td>))}
+                    <td className="px-3 py-2.5 text-center"><input type="number" min="1" value={line.quantity} onChange={e=>updateLine(line.id,'quantity',Number(e.target.value))} className="w-16 text-center bg-transparent border border-gray-200 rounded-lg focus:border-red-400 outline-none text-sm py-1.5 px-2"/></td>
+                    <td className="px-4 py-2.5"><input value={line.notes} onChange={e=>updateLine(line.id,'notes',e.target.value)} placeholder="Notas..." className="w-full bg-transparent border-b border-gray-200 focus:border-red-400 outline-none text-sm py-0.5"/></td>
+                    <td className="px-3 py-2.5 text-center"><button onClick={()=>removeLine(line.id)} className="p-1 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"><Trash2 size={14}/></button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-5 py-4 border-t border-gray-100">
+            <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">Observacoes Gerais</label>
+            <textarea value={measurementSheet.generalNotes} onChange={e=>setMeasurementSheet({...measurementSheet,generalNotes:e.target.value})} placeholder="Ex: Calha precisa emenda, cliente prefere Natural..." rows={3} className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm resize-none focus:border-red-400 focus:ring-1 focus:ring-red-200 outline-none bg-amber-50/30"/>
+          </div>
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+            <p className="text-xs text-gray-400">{isSaved?`Atualizado: ${format(new Date(measurementSheet.updatedAt),'dd/MM HH:mm',{locale:ptBR})}`:'Nao salvo ainda'}</p>
+            <div className="flex gap-2"><Button size="sm" variant="outline" onClick={handlePrint} icon={<Printer size={14}/>}>Imprimir</Button><Button size="sm" onClick={saveMeasurements} icon={<Save size={14}/>}>{isSaved?'Atualizar no Banco':'Salvar no Banco'}</Button></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-fadeIn">
-      {/* Visits List */}
-      <div className="space-y-4">
-        <Card>
-          <CardHeader 
-            title="Fichas de Visita"
-            subtitle={`${pendingVisits.length} visitas pendentes`}
-            icon={<FileText size={20} />}
-          />
-          
-          <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
-            {pendingVisits.length === 0 ? (
-              <div className="text-center py-10 text-gray-500">
-                <Calendar size={48} className="mx-auto mb-3 opacity-50" />
-                <p className="font-medium">Nenhuma visita pendente</p>
-                <p className="text-sm">Agende visitas na tela de Agenda</p>
-              </div>
-            ) : (
-              pendingVisits.map((visit) => (
-                <div
-                  key={visit.id}
-                  onClick={() => setSelectedVisit(visit)}
-                  className={cn(
-                    'p-4 rounded-lg border-2 cursor-pointer transition-all',
-                    selectedVisit?.id === visit.id
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-100 bg-gray-50 hover:border-gray-200'
-                  )}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                        <User size={20} className="text-red-600" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{visit.leadName}</h4>
-                        <p className="text-sm text-gray-600">{visit.service}</p>
-                      </div>
-                    </div>
-                    <Badge variant="info">
-                      {format(new Date(visit.date), 'dd/MM')}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-gray-500 mt-3">
-                    <span className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {visit.time}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Phone size={14} />
-                      {visit.phone}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
+    <div className="animate-fadeIn space-y-5">
+      <div className="flex items-center justify-between">
+        <div><h2 className="text-lg font-semibold text-gray-900">{pendingVisits.length} visitas pendentes</h2><p className="text-sm text-gray-500">Clique para abrir a ficha de medicao completa</p></div>
       </div>
-
-      {/* Visit Card Preview */}
-      <div className="space-y-4">
-        {selectedVisit ? (
-          <>
-            {/* Action Buttons */}
-            <Card padding="sm">
-              <div className="flex flex-wrap gap-3">
-                <Button onClick={handlePrint} icon={<Printer size={18} />}>
-                  Imprimir
-                </Button>
-                <Button onClick={handleWhatsApp} variant="success" icon={<MessageSquare size={18} />}>
-                  WhatsApp
-                </Button>
-                <Button onClick={handleOpenMap} variant="secondary" icon={<Navigation size={18} />}>
-                  Abrir Mapa
-                </Button>
-                <Button variant="ghost" onClick={handleDownload} icon={<Download size={18} />}>
-                  PDF
-                </Button>
-              </div>
-            </Card>
-
-            {measurementSheet && (
-              <Card>
-                <CardHeader
-                  title="Folha de Medições"
-                  subtitle="Preencha no local da visita e salve no sistema"
-                  icon={<FileText size={20} />}
-                  action={
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="ghost" onClick={addMeasurementLine}>
-                        Adicionar linha
-                      </Button>
-                      <Button size="sm" onClick={saveMeasurements}>
-                        Salvar
-                      </Button>
-                    </div>
-                  }
-                />
-                <div className="space-y-3">
-                  {measurementSheet.lines.map((line) => (
-                    <div key={line.id} className="grid grid-cols-12 gap-2 rounded-lg border border-gray-200 p-3">
-                      <div className="col-span-12 sm:col-span-3">
-                        <Input
-                          placeholder="Ambiente / peça"
-                          value={line.location}
-                          onChange={(event) => updateMeasurementLine(line.id, 'location', event.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        <Input
-                          placeholder="Largura"
-                          value={line.width}
-                          onChange={(event) => updateMeasurementLine(line.id, 'width', event.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        <Input
-                          placeholder="Altura"
-                          value={line.height}
-                          onChange={(event) => updateMeasurementLine(line.id, 'height', event.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-2">
-                        <Input
-                          placeholder="Prof."
-                          value={line.depth}
-                          onChange={(event) => updateMeasurementLine(line.id, 'depth', event.target.value)}
-                        />
-                      </div>
-                      <div className="col-span-4 sm:col-span-1">
-                        <Input
-                          type="number"
-                          min={1}
-                          value={line.quantity}
-                          onChange={(event) => updateMeasurementLine(line.id, 'quantity', Number(event.target.value))}
-                        />
-                      </div>
-                      <div className="col-span-8 sm:col-span-2">
-                        <Input
-                          placeholder="Obs."
-                          value={line.notes}
-                          onChange={(event) => updateMeasurementLine(line.id, 'notes', event.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  <TextArea
-                    label="Observações gerais"
-                    value={measurementSheet.generalNotes}
-                    onChange={(event) => setMeasurementSheet({
-                      ...measurementSheet,
-                      generalNotes: event.target.value,
-                      updatedAt: new Date(),
-                    })}
-                    rows={3}
-                  />
-                </div>
-              </Card>
-            )}
-
-            {/* Printable Measurement Sheet */}
-            <div id="print-area" ref={printRef} className="print:block">
-              <div className="measurement-print-page bg-white rounded-lg border border-gray-200 shadow-sm print:rounded-none print:border-0 print:shadow-none">
-                <section className="measurement-print-header">
-                  <div className="flex items-start justify-between border-b-2 border-red-600 pb-2">
+      {pendingVisits.length===0?(
+        <div className="bg-white rounded-xl border border-gray-200 py-16 text-center"><Calendar size={48} className="mx-auto mb-3 text-gray-300"/><h3 className="font-semibold text-gray-700">Nenhuma visita pendente</h3><p className="text-sm text-gray-400 mt-1">Agende visitas na tela de Agenda</p></div>
+      ):(
+        <div className="grid gap-4">
+          {pendingVisits.map(visit=>{
+            const hasMeasurement = measurementSheets.some(s=>s.visitId===visit.id);
+            return (
+              <div key={visit.id} onClick={()=>openVisit(visit)} className="bg-white rounded-xl border border-gray-200 hover:border-red-300 hover:shadow-md transition-all cursor-pointer group">
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="grid h-11 w-11 place-items-center rounded-lg bg-gradient-to-br from-red-600 to-red-800 text-xl font-black text-white">
-                        M
-                      </div>
-                      <div>
-                        <h1 className="text-lg font-black leading-tight text-gray-950">Marquinhos Calhas e Esquadrias</h1>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
-                          Ficha integrada ao CRM
-                        </p>
-                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-bold text-lg">{visit.leadName[0]}</div>
+                      <div><h3 className="font-bold text-gray-900 group-hover:text-red-600 transition-colors">{visit.leadName}</h3><p className="text-sm text-gray-500">{visit.service}</p></div>
                     </div>
-                    <div className="text-right">
-                      <h2 className="text-base font-black uppercase text-red-700">Ficha de Medição</h2>
-                      <p className="text-[11px] font-semibold text-gray-500">Nº {selectedVisit.id.slice(0, 8).toUpperCase()}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-12 gap-2 text-[10px] leading-tight">
-                    <div className="col-span-5 rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <p className="font-bold uppercase text-gray-500">Cliente</p>
-                      <p className="mt-1 text-[12px] font-black text-gray-950">{selectedLead?.name || selectedVisit.leadName}</p>
-                    </div>
-                    <div className="col-span-3 rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <p className="font-bold uppercase text-gray-500">Telefone completo</p>
-                      <p className="mt-1 text-[12px] font-black text-gray-950">{selectedLead?.phone || selectedVisit.phone}</p>
-                    </div>
-                    <div className="col-span-2 rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <p className="font-bold uppercase text-gray-500">Tipo</p>
-                      <p className="mt-1 text-[12px] font-black text-gray-950">{visitKind}</p>
-                    </div>
-                    <div className="col-span-2 rounded-md border border-gray-200 bg-gray-50 p-2">
-                      <p className="font-bold uppercase text-gray-500">Medidor</p>
-                      <p className="mt-1 text-[12px] font-black text-gray-950">{measurerName}</p>
-                    </div>
-
-                    <div className="col-span-6 rounded-md border border-gray-200 p-2">
-                      <p className="font-bold uppercase text-gray-500">Endereço completo com bairro</p>
-                      <p className="mt-1 font-semibold text-gray-900">{fullAddress || 'Endereço não informado'}</p>
-                    </div>
-                    <div className="col-span-6 rounded-md border border-gray-200 p-2">
-                      <p className="font-bold uppercase text-gray-500">Referência</p>
-                      <p className="mt-1 font-semibold text-gray-900">{reference}</p>
-                    </div>
-
-                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
-                      <p className="font-bold uppercase text-red-700">Disponibilidade de horário</p>
-                      <p className="mt-1 text-[12px] font-black text-red-900">{availability}</p>
-                    </div>
-                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
-                      <p className="font-bold uppercase text-red-700">Data de solicitação</p>
-                      <p className="mt-1 text-[12px] font-black text-red-900">{formatDateSafe(selectedLead?.createdAt || selectedVisit.createdAt)}</p>
-                    </div>
-                    <div className="col-span-4 rounded-md border border-red-100 bg-red-50 p-2">
-                      <p className="font-bold uppercase text-red-700">Data de medição</p>
-                      <p className="mt-1 text-[12px] font-black text-red-900">
-                        {formatDateSafe(selectedVisit.date)} {selectedVisit.time ? `às ${selectedVisit.time}` : ''}
-                      </p>
-                    </div>
-                  </div>
-                </section>
-                <div className="measurement-print-blank" aria-label="Área em branco para medições manuais" />
-              </div>
-
-              <Card className="hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                      M
-                    </div>
-                    <div>
-                      <h1 className="text-xl font-bold text-gray-900">Marquinhos</h1>
-                      <p className="text-sm text-gray-500">Esquadrias • Alumínio • Vidros • Calhas</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <h2 className="text-lg font-bold text-red-600">FICHA DE VISITA</h2>
-                    <p className="text-sm text-gray-500">Nº {selectedVisit.id.slice(0, 8).toUpperCase()}</p>
-                  </div>
-                </div>
-
-                {/* Visit Info */}
-                <div className="space-y-5">
-                  {/* Client Section */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <User size={18} />
-                      DADOS DO CLIENTE
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Nome</p>
-                        <p className="font-semibold text-lg">{selectedVisit.leadName}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Telefone</p>
-                        <p className="font-semibold text-lg">{selectedVisit.phone}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Service Section */}
-                  <div className="bg-red-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <FileText size={18} />
-                      SERVIÇO SOLICITADO
-                    </h3>
-                    <p className="text-lg font-medium text-red-900">{selectedVisit.service}</p>
-                  </div>
-
-                  {/* Address Section */}
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <MapPin size={18} />
-                      ENDEREÇO
-                    </h3>
-                    <p className="text-lg">{selectedVisit.address}</p>
-                  </div>
-
-                  {/* Date/Time Section */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-red-50 rounded-lg p-4 text-center">
-                      <h3 className="font-semibold text-gray-700 mb-2 flex items-center justify-center gap-2">
-                        <Calendar size={18} />
-                        DATA
-                      </h3>
-                      <p className="text-2xl font-bold text-red-700">
-                        {format(new Date(selectedVisit.date), 'dd/MM/yyyy', { locale: ptBR })}
-                      </p>
-                    </div>
-                    <div className="bg-red-50 rounded-lg p-4 text-center">
-                      <h3 className="font-semibold text-gray-700 mb-2 flex items-center justify-center gap-2">
-                        <Clock size={18} />
-                        HORÁRIO
-                      </h3>
-                      <p className="text-2xl font-bold text-red-700">{selectedVisit.time}</p>
-                    </div>
-                  </div>
-
-                  {/* Observations */}
-                  {selectedVisit.observations && (
-                    <div className="bg-red-50 rounded-lg p-4">
-                      <h3 className="font-semibold text-gray-700 mb-2">OBSERVAÇÕES</h3>
-                      <p className="text-gray-700">{selectedVisit.observations}</p>
-                    </div>
-                  )}
-
-                  {/* Notes Section (for printing) */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-700 mb-2">ANOTAÇÕES DA VISITA</h3>
-                    <div className="h-32 print:h-48"></div>
-                  </div>
-
-                  {/* Measurements Section (for printing) */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                    <h3 className="font-semibold text-gray-700 mb-2">MEDIDAS</h3>
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left text-gray-500">
-                          <th className="py-2">Ambiente</th>
-                          <th className="py-2">Largura</th>
-                          <th className="py-2">Altura</th>
-                          <th className="py-2">Prof.</th>
-                          <th className="py-2">Qtd</th>
-                          <th className="py-2">Obs.</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(measurementSheet?.lines || []).map((line) => (
-                          <tr key={line.id} className="border-b">
-                            <td className="py-2">{line.location}</td>
-                            <td className="py-2">{line.width || '____'}</td>
-                            <td className="py-2">{line.height || '____'}</td>
-                            <td className="py-2">{line.depth || '____'}</td>
-                            <td className="py-2">{line.quantity}</td>
-                            <td className="py-2">{line.notes}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {measurementSheet?.generalNotes && (
-                      <p className="mt-3 text-sm text-gray-700">{measurementSheet.generalNotes}</p>
-                    )}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200 text-sm text-gray-500">
                     <div className="flex items-center gap-2">
-                      <CheckCircle size={16} className="text-red-500" />
-                      <span>Gerado automaticamente por Marquinhos</span>
+                      {hasMeasurement&&<span className="flex items-center gap-1 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium border border-green-100"><CheckCircle size={12}/> Medicao salva</span>}
+                      <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">{visit.status}</span>
                     </div>
-                    <span>{format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-gray-600"><Calendar size={14} className="text-gray-400"/><span>{formatDate(visit.date)}</span></div>
+                    <div className="flex items-center gap-2 text-gray-600"><Clock size={14} className="text-gray-400"/><span>{visit.time||'-'}</span></div>
+                    <div className="flex items-center gap-2 text-gray-600"><Phone size={14} className="text-gray-400"/><span>{visit.phone||'-'}</span></div>
+                    <div className="flex items-center gap-2 text-gray-600"><MapPin size={14} className="text-gray-400"/><span className="truncate">{visit.address||'-'}</span></div>
                   </div>
                 </div>
-              </Card>
-            </div>
-          </>
-        ) : (
-          <Card className="flex flex-col items-center justify-center h-96">
-            <FileText size={64} className="text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-2">Selecione uma Visita</h3>
-            <p className="text-gray-500 text-center">
-              Clique em uma visita à esquerda para visualizar e imprimir a ficha
-            </p>
-          </Card>
-        )}
-      </div>
-
-      {/* Print Styles */}
-      <style>{`
-        @media print {
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          body * {
-            visibility: hidden;
-          }
-          #print-area, #print-area * {
-            visibility: visible;
-          }
-          #print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 210mm;
-            min-height: 297mm;
-            background: white;
-          }
-          .measurement-print-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 10mm;
-            background: white;
-          }
-          .measurement-print-header {
-            max-height: 58mm;
-            overflow: hidden;
-          }
-          .measurement-print-blank {
-            height: 220mm;
-            background: white;
-          }
-          .no-print {
-            display: none !important;
-          }
-        }
-      `}</style>
+                <div className="px-5 py-3 bg-gray-50 rounded-b-xl border-t border-gray-100 flex items-center justify-between">
+                  <span className="text-xs text-gray-400">{hasMeasurement?'Ficha preenchida':'Ficha pendente'}</span>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-red-600 group-hover:translate-x-1 transition-transform">Abrir Ficha <ArrowRight size={14}/></span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
