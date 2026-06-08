@@ -19,7 +19,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
+// Modal removed - full-page navigation
 import { useStore } from '../store/useStore';
 import { Budget, BudgetItem, QuotePriceItem } from '../types';
 import { format } from 'date-fns';
@@ -47,8 +47,7 @@ export const Orcamentos: React.FC = () => {
     deleteQuotePriceItem,
     updateQuoteSettings,
   } = useStore();
-  const [showNewModal, setShowNewModal] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [pageView, setPageView] = useState<'list' | 'new' | 'preview'>('list');
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [activeQuoteType, setActiveQuoteType] = useState<QuoteType>('calhas');
 
@@ -106,10 +105,10 @@ export const Orcamentos: React.FC = () => {
     { value: 'Pingadeira de Fechamento', label: 'Pingadeira de fechamento' },
     { value: 'Linha de Acessorios', label: 'Linha de acessorios' },
     { value: 'Produto Avulso', label: 'Produto avulso' },
-    { value: 'Mao de Obra Manutencao', label: 'MÃO DE OBRA - MANUTENÇÃO' },
-    { value: 'Mao de Obra Instalacao', label: 'MÃO DE OBRA - INSTALAÇÃO' },
-    { value: 'Mao de Obra Pintura', label: 'MÃO DE OBRA - PINTURA' },
-    { value: 'Mao de Obra Remocao Telhas', label: 'MÃO DE OBRA - REMOÇÃO E REINSTALAÇÃO DE TELHAS' },
+    { value: 'Mao de Obra Manutencao', label: 'MÃO DE OBRA - MANUTENÃÃO' },
+    { value: 'Mao de Obra Instalacao', label: 'MÃO DE OBRA - INSTALAÃÃO' },
+    { value: 'Mao de Obra Pintura', label: 'MÃO DE OBRA - PINTURA' },
+    { value: 'Mao de Obra Remocao Telhas', label: 'MÃO DE OBRA - REMOÃÃO E REINSTALAÃÃO DE TELHAS' },
   ];
   const frameProductOptions = [
     { value: 'Janela', label: 'Janela' },
@@ -152,17 +151,17 @@ export const Orcamentos: React.FC = () => {
     'Pingadeira de Fechamento': 'PINGADEIRA DE FECHAMENTO',
     'Linha de Acessorios': 'LINHA DE ACESSORIOS',
     'Produto Avulso': 'PRODUTO',
-    'Mao de Obra Manutencao': 'MÃO DE OBRA PARA MANUTENÇÃO',
-    'Mao de Obra Instalacao': 'MÃO DE OBRA PARA INSTALAÇÃO',
-    'Mao de Obra Pintura': 'MÃO DE OBRA PARA PINTURA',
-    'Mao de Obra Remocao Telhas': 'MÃO DE OBRA PARA REMOÇÃO E REINSTALAÇÃO DE TELHAS',
+    'Mao de Obra Manutencao': 'MÃO DE OBRA PARA MANUTENÃÃO',
+    'Mao de Obra Instalacao': 'MÃO DE OBRA PARA INSTALAÃÃO',
+    'Mao de Obra Pintura': 'MÃO DE OBRA PARA PINTURA',
+    'Mao de Obra Remocao Telhas': 'MÃO DE OBRA PARA REMOÃÃO E REINSTALAÃÃO DE TELHAS',
   };
 
   const buildGutterItemName = (product: string, thickness: string, cut: string, color: string) => {
     const baseName = gutterProductNames[product] || product.toUpperCase();
     const category = categoryFromProduct(product);
     if (category === 'instalacao') return baseName;
-    return `${baseName} EM ALUMÍNIO ${thickness}MM C/${cut}MM NA COR ${color.toUpperCase()}`;
+    return `${baseName} EM ALUMÃNIO ${thickness}MM C/${cut}MM NA COR ${color.toUpperCase()}`;
   };
 
   const buildMetalSheetDescription = () => {
@@ -408,8 +407,8 @@ export const Orcamentos: React.FC = () => {
     };
 
     addBudget(newBudget);
-    toast.success('Orçamento criado com sucesso');
-    setShowNewModal(false);
+    toast.success('OrÃ§amento criado com sucesso');
+    setPageView('list');
     resetForm();
   };
 
@@ -434,12 +433,12 @@ export const Orcamentos: React.FC = () => {
     addNotification({
       id: uuidv4(),
       type: 'info',
-      title: 'Orçamento enviado',
-      message: `Orçamento de ${budget.leadName} foi marcado como enviado`,
+      title: 'OrÃ§amento enviado',
+      message: `OrÃ§amento de ${budget.leadName} foi marcado como enviado`,
       read: false,
       createdAt: new Date(),
     });
-    toast.success('Orçamento marcado como enviado');
+    toast.success('OrÃ§amento marcado como enviado');
   };
 
   const handleApprove = (budget: Budget) => {
@@ -470,34 +469,34 @@ export const Orcamentos: React.FC = () => {
     addNotification({
       id: uuidv4(),
       type: 'success',
-      title: 'Orçamento aprovado',
-      message: `${budget.leadName} entrou em produção`,
+      title: 'OrÃ§amento aprovado',
+      message: `${budget.leadName} entrou em produÃ§Ã£o`,
       read: false,
       createdAt: new Date(),
     });
-    toast.success('Orçamento aprovado e produção criada');
+    toast.success('OrÃ§amento aprovado e produÃ§Ã£o criada');
   };
 
   const handleReject = (budget: Budget) => {
     updateBudget(budget.id, { status: 'rejected' });
     updateLeadStatus(budget.leadId, 'negociacao');
-    toast.success('Orçamento marcado como rejeitado');
+    toast.success('OrÃ§amento marcado como rejeitado');
   };
 
   const handlePreview = (budget: Budget) => {
     setSelectedBudget(budget);
-    setShowPreviewModal(true);
+    setPageView('preview');
   };
 
   const handleWhatsAppBudget = (budget: Budget) => {
     const lead = leads.find(l => l.id === budget.leadId);
     if (!lead) {
-      toast.error('Cliente não encontrado');
+      toast.error('Cliente nÃ£o encontrado');
       return;
     }
 
     const ok = openWhatsApp(lead.phone, buildBudgetText(budget, quoteSettings));
-    if (!ok) toast.error('Telefone inválido para WhatsApp');
+    if (!ok) toast.error('Telefone invÃ¡lido para WhatsApp');
   };
 
   const handleEmailBudget = (budget: Budget) => {
@@ -507,7 +506,7 @@ export const Orcamentos: React.FC = () => {
       return;
     }
 
-    const subject = encodeURIComponent(`Orçamento Marquinhos - ${budget.leadName}`);
+    const subject = encodeURIComponent(`OrÃ§amento Marquinhos - ${budget.leadName}`);
     const body = encodeURIComponent(buildBudgetText(budget, quoteSettings));
     window.location.href = `mailto:${lead.email}?subject=${subject}&body=${body}`;
   };
@@ -521,7 +520,7 @@ export const Orcamentos: React.FC = () => {
 
   const handleCopyBudget = async (budget: Budget) => {
     await copyText(buildBudgetText(budget, quoteSettings));
-    toast.success('Orçamento copiado');
+    toast.success('OrÃ§amento copiado');
   };
 
   const statusConfig: Record<string, { label: string; color: string }> = {
@@ -538,6 +537,7 @@ export const Orcamentos: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-fadeIn">
+      {pageView === 'list' && <>
       {!showNewModal && (
         <>
       {/* Header */}
@@ -548,7 +548,7 @@ export const Orcamentos: React.FC = () => {
           </h2>
           <p className="text-sm text-gray-500">{quoteTypeConfig[activeQuoteType].description}</p>
         </div>
-        <Button onClick={() => { setQuoteType(activeQuoteType); setShowNewModal(true); }} icon={<Plus size={18} />}>
+        <Button onClick={() => { setQuoteType(activeQuoteType); setPageView('new'); }} icon={<Plus size={18} />}>
           Novo Orcamento
         </Button>
       </div>
@@ -633,9 +633,9 @@ export const Orcamentos: React.FC = () => {
         {filteredBudgets.length === 0 ? (
           <Card className="text-center py-10">
             <FileText size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orçamento</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orÃ§amento</h3>
             <p className="text-gray-500 mb-4">Crie seu primeiro orcamento de {quoteTypeConfig[activeQuoteType].label.toLowerCase()}</p>
-            <Button onClick={() => { setQuoteType(activeQuoteType); setShowNewModal(true); }} icon={<Plus size={18} />}>
+            <Button onClick={() => { setQuoteType(activeQuoteType); setPageView('new'); }} icon={<Plus size={18} />}>
               Criar Orcamento
             </Button>
           </Card>
@@ -715,7 +715,7 @@ export const Orcamentos: React.FC = () => {
               </h2>
               <p className="text-sm text-gray-500">{quoteTypeConfig[formData.quoteType].description}</p>
             </div>
-            <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
+            <Button type="button" variant="ghost" onClick={() => setPageView('list')}>
               Voltar para orcamentos
             </Button>
           </div>
@@ -880,7 +880,7 @@ export const Orcamentos: React.FC = () => {
           <div>
             <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
               <Package size={18} />
-              Itens do Orçamento
+              Itens do OrÃ§amento
             </h4>
 
             {/* Add Item Form */}
@@ -987,7 +987,7 @@ export const Orcamentos: React.FC = () => {
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="text-left p-3">Descrição</th>
+                      <th className="text-left p-3">DescriÃ§Ã£o</th>
                       <th className="text-center p-3">Qtd</th>
                       <th className="text-center p-3">Un</th>
                       <th className="text-right p-3">Unit.</th>
@@ -1023,7 +1023,7 @@ export const Orcamentos: React.FC = () => {
           {/* Costs */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Input
-              label="Mão de obra"
+              label="MÃ£o de obra"
               type="number"
               value={formData.laborCost || ''}
               onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
@@ -1072,7 +1072,7 @@ export const Orcamentos: React.FC = () => {
                   <span>{formatCurrency(calculateTotals().itemsTotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Mão de obra</span>
+                  <span>MÃ£o de obra</span>
                   <span>{formatCurrency(formData.laborCost)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -1105,14 +1105,14 @@ export const Orcamentos: React.FC = () => {
               min={1}
             />
             <Input
-              label="Condições de Pagamento"
+              label="CondiÃ§Ãµes de Pagamento"
               value={formData.paymentConditions}
               onChange={(e) => setFormData({ ...formData, paymentConditions: e.target.value })}
             />
           </div>
 
           <TextArea
-            label="Observações"
+            label="ObservaÃ§Ãµes"
             value={formData.observations}
             onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
             rows={3}
@@ -1120,11 +1120,11 @@ export const Orcamentos: React.FC = () => {
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
+            <Button type="button" variant="ghost" onClick={() => setPageView('list')}>
               Cancelar
             </Button>
             <Button type="submit" disabled={formData.items.length === 0}>
-              Criar Orçamento
+              Criar OrÃ§amento
             </Button>
           </div>
         </form>
@@ -1134,8 +1134,8 @@ export const Orcamentos: React.FC = () => {
       {/* Preview Modal */}
       <Modal
         isOpen={showPreviewModal}
-        onClose={() => setShowPreviewModal(false)}
-        title="Orçamento"
+        onClose={() => setPageView('list')}
+        title="OrÃ§amento"
         size="lg"
       >
         {selectedBudget && (
@@ -1161,7 +1161,7 @@ export const Orcamentos: React.FC = () => {
                 </div>
               </div>
               <div className="text-right">
-                <h2 className="text-lg font-bold text-red-600">ORÇAMENTO</h2>
+                <h2 className="text-lg font-bold text-red-600">ORÃAMENTO</h2>
                 <p className="text-sm text-gray-500">#{selectedBudget.id.slice(0, 8).toUpperCase()}</p>
               </div>
             </div>
@@ -1184,7 +1184,7 @@ export const Orcamentos: React.FC = () => {
               <table className="w-full text-sm">
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="text-left p-2">Descrição</th>
+                    <th className="text-left p-2">DescriÃ§Ã£o</th>
                     <th className="text-center p-2">Qtd</th>
                     <th className="text-right p-2">Unit.</th>
                     <th className="text-right p-2">Total</th>
@@ -1206,7 +1206,7 @@ export const Orcamentos: React.FC = () => {
             {/* Totals */}
             <div className="bg-gray-50 p-4 rounded-lg space-y-2">
               <div className="flex justify-between">
-                <span>Mão de obra</span>
+                <span>MÃ£o de obra</span>
                 <span>{formatCurrency(selectedBudget.laborCost)}</span>
               </div>
               <div className="flex justify-between">
@@ -1237,7 +1237,7 @@ export const Orcamentos: React.FC = () => {
               <p><strong>Pagamento:</strong> {selectedBudget.paymentConditions}</p>
               {quoteSettings.pixKey && <p><strong>PIX:</strong> {quoteSettings.pixKey}</p>}
               {selectedBudget.observations && (
-                <p><strong>Observações:</strong> {selectedBudget.observations}</p>
+                <p><strong>ObservaÃ§Ãµes:</strong> {selectedBudget.observations}</p>
               )}
               {quoteSettings.footerText && (
                 <p className="mt-3 rounded-lg bg-gray-50 p-3">{quoteSettings.footerText}</p>
