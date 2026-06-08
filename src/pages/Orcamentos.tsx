@@ -1,403 +1,409 @@
-import React, { useState } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  Send, 
-  Download, 
-  Eye,
-  Trash2,
-  Calculator,
-  Package,
-  DollarSign,
-  Percent,
-  MessageSquare,
-  Mail,
-  CheckCircle,
-  XCircle
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import {
+  Plus, FileText, Send, Download, Eye, Trash2, Calculator, Package,
+  DollarSign, Percent, MessageSquare, Mail, CheckCircle, XCircle,
+  Lock, Layers, Paintbrush, Wrench, ChevronDown, ChevronLeft, AlertCircle, Printer,
+  Copy, MoreVertical, Tag, Settings2,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-// Modal removed - full-page navigation
+// Modal removed — using full-page navigation instead
 import { useStore } from '../store/useStore';
-import { Budget, BudgetItem, QuotePriceItem } from '../types';
+import { Budget, BudgetItem, QuotePriceItem, UserRole } from '../types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
-import { buildBudgetText, copyText, openBudgetPdf, openWhatsApp } from '../utils/actions';
+import { buildBudgetText, copyText, downloadTextFile, openWhatsApp, formatCurrency } from '../utils/actions';
 
-type QuoteType = 'calhas' | 'esquadrias';
+// ─── Access control ────────────────────────────────────────────────────────────
+const ALLOWED_ROLES: UserRole[] = ['admin', 'gerente', 'vendedor'];
+const PRICE_VISIBLE_ROLES: UserRole[] = ['admin', 'gerente', 'vendedor'];
 
-export const Orcamentos: React.FC = () => {
-  const {
-    budgets,
-    leads,
-    productions,
-    quotePriceItems,
-    quoteSettings,
-    addBudget,
-    updateBudget,
-    addProduction,
-    updateLeadStatus,
-    addNotification,
-    addQuotePriceItem,
-    updateQuotePriceItem,
-    deleteQuotePriceItem,
-    updateQuoteSettings,
-  } = useStore();
-  const [pageView, setPageView] = useState<'list' | 'new' | 'preview'>('list');
-  const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
-  const [activeQuoteType, setActiveQuoteType] = useState<QuoteType>('calhas');
+// ─── Product catalog ──────────────────────────────────────────────────────────
+const THICKNESS_OPTS = ['0.50', '0.60', '0.70', '1.00'];
+const CUT_OPTS = ['150','200','250','300','330','350','400','500','600','700','800','900','1000','1200'];
+const COLOR_OPTS = ['Natural','Branco','Preto','Bronze','Grafite','Amarelo','Vermelho','Verde'];
+const UNIT_OPTS = [{ value: 'm', label: 'm' },{ value: 'un', label: 'un' },{ value: 'kg', label: 'kg' },{ value: 'kit', label: 'kit' },{ value: 'h', label: 'h' }];
 
-  // Form state
-  const [formData, setFormData] = useState({
-    quoteType: 'calhas' as QuoteType,
-    leadId: '',
-    items: [] as BudgetItem[],
-    laborCost: 0,
-    travelCost: 0,
-    discount: 0,
-    discountType: 'percentage' as 'percentage' | 'fixed',
-    validity: 15,
-    paymentConditions: '50% entrada + 50% na entrega',
-    observations: '',
+type ItemGroup = 'calha' | 'rufo' | 'pingadeira' | 'acessorio' | 'instalacao';
+
+interface ProductDef {
+  label: string;
+  group: ItemGroup;
+  hasAluminium: boolean;   // shows thickness/cut/color selectors
+  defaultUnit: string;
+}
+
+const PRODUCT_CATALOG: ProductDef[] = [
+  // CALHAS
+  { label: 'Calha Platibanda',        group: 'calha',      hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Calha Beiral',            group: 'calha',      hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Calha Coletora',          group: 'calha',      hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Calha de Meio',           group: 'calha',      hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Condutor',                group: 'calha',      hasAluminium: true,  defaultUnit: 'm' },
+  // RUFOS
+  { label: 'Rufo com Pingadeira',     group: 'rufo',       hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Rufo Chapéu',             group: 'rufo',       hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Rufo de Acabamento',      group: 'rufo',       hasAluminium: true,  defaultUnit: 'm' },
+  // PINGADEIRAS
+  { label: 'Pingadeira com Rufo',     group: 'pingadeira', hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Pingadeira de Muro',      group: 'pingadeira', hasAluminium: true,  defaultUnit: 'm' },
+  { label: 'Pingadeira de Fechamento',group: 'pingadeira', hasAluminium: true,  defaultUnit: 'm' },
+  // ACESSÓRIOS
+  { label: 'Conector de Calha',       group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Abraçadeira',             group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Saída d\'água',           group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Tampa de Calha',          group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Fixador de Condutor',     group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Item Personalizado',      group: 'acessorio',  hasAluminium: false, defaultUnit: 'un' },
+  // INSTALAÇÃO
+  { label: 'Mão de obra – Instalação',group: 'instalacao', hasAluminium: false, defaultUnit: 'm' },
+  { label: 'Mão de obra – Manutenção',group: 'instalacao', hasAluminium: false, defaultUnit: 'h' },
+  { label: 'Mão de obra – Remoção e Reinstalação de Telhas', group: 'instalacao', hasAluminium: false, defaultUnit: 'un' },
+  { label: 'Material de Pintura',     group: 'instalacao', hasAluminium: false, defaultUnit: 'kit' },
+  { label: 'Mão de obra – Pintura',   group: 'instalacao', hasAluminium: false, defaultUnit: 'm' },
+];
+
+const GROUP_LABELS: Record<ItemGroup, string> = {
+  calha: '🏗️ Calhas',
+  rufo: '🔩 Rufos',
+  pingadeira: '💧 Pingadeiras',
+  acessorio: '🔧 Acessórios',
+  instalacao: '👷 Instalação',
+};
+
+const PAINT_LABOR_LABEL = 'Mão de obra – Pintura';
+const PAINT_MATERIAL_LABEL = 'Material de Pintura';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const buildDescription = (
+  product: string, thickness: string, cut: string, color: string, hasAlu: boolean, custom: string
+): string => {
+  if (custom.trim()) return custom;
+  if (!hasAlu) return product;
+  return `${product} Alumínio ${thickness}mm C/${cut} ${color}`;
+};
+
+const needsPaintItems = (color: string) => color !== 'Natural' && color !== '';
+
+const categoryFromGroup = (g: ItemGroup): BudgetItem['category'] => {
+  if (g === 'calha') return 'calha';
+  if (g === 'rufo') return 'rufo';
+  if (g === 'pingadeira') return 'pingadeira';
+  if (g === 'instalacao') return 'instalacao';
+  return 'acessorio';
+};
+
+// ─── PDF generator (pure HTML → print window) ────────────────────────────────
+const generatePDF = (budget: Budget, settings: any) => {
+  const discountAmount = budget.discountType === 'percentage'
+    ? (budget.subtotal * budget.discount) / 100
+    : budget.discount;
+
+  const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+  // Group items by category
+  const groups: Record<string, BudgetItem[]> = {};
+  budget.items.forEach(item => {
+    const g = item.category || 'outro';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(item);
   });
 
-  const [newItem, setNewItem] = useState({
-    priceMode: 'saved' as 'saved' | 'manual',
-    priceItemId: '',
-    category: 'calha' as BudgetItem['category'],
-    product: 'Calha Platibanda',
-    thickness: '0.5',
+  const catLabel: Record<string, string> = {
+    calha: 'Calhas', rufo: 'Rufos', pingadeira: 'Pingadeiras',
+    acessorio: 'Acessórios', instalacao: 'Instalação / Serviços', outro: 'Outros',
+  };
+
+  const itemsHtml = Object.entries(groups).map(([cat, items]) => `
+    <tr><td colspan="5" style="background:#1a1a2e;color:#fff;padding:8px 12px;font-weight:700;font-size:11px;letter-spacing:.05em;text-transform:uppercase">${catLabel[cat] || cat}</td></tr>
+    ${items.map(i => `
+      <tr>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f0f0;font-size:12px">${i.description}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:12px">${i.quantity}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f0f0;text-align:center;font-size:12px">${i.unit}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:12px">${fmt(i.unitPrice)}</td>
+        <td style="padding:9px 12px;border-bottom:1px solid #f0f0f0;text-align:right;font-size:12px;font-weight:600">${fmt(i.total)}</td>
+      </tr>`).join('')}
+  `).join('');
+
+  // QR Code PIX (simple URL-based approach)
+  const pixQr = settings.pixKey
+    ? `<div style="text-align:center;margin-top:16px">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent('PIX:' + settings.pixKey)}" alt="QR Code PIX" style="width:90px;height:90px;border:1px solid #ddd;border-radius:8px"/>
+        <p style="font-size:10px;color:#666;margin-top:4px">PIX: ${settings.pixKey}</p>
+      </div>`
+    : '';
+
+  const logoHtml = settings.logoUrl
+    ? `<img src="${settings.logoUrl}" style="height:56px;object-fit:contain;border-radius:8px" alt="logo"/>`
+    : `<div style="width:52px;height:52px;background:linear-gradient(135deg,#dc2626,#991b1b);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:900">M</div>`;
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8"/>
+<title>Orçamento ${budget.id.slice(0,8).toUpperCase()} – ${budget.leadName}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;color:#1a1a2e;background:#fff;font-size:13px}
+  @page{margin:14mm 14mm 14mm 14mm}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head><body>
+<!-- HEADER -->
+<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #dc2626;padding-bottom:18px;margin-bottom:20px">
+  <div style="display:flex;align-items:center;gap:14px">
+    ${logoHtml}
+    <div>
+      <div style="font-size:20px;font-weight:900;color:#1a1a2e">${settings.companyName}</div>
+      ${settings.document ? `<div style="font-size:11px;color:#666">${settings.document}</div>` : ''}
+      ${settings.phone ? `<div style="font-size:11px;color:#666">📞 ${settings.phone}</div>` : ''}
+      ${settings.email ? `<div style="font-size:11px;color:#666">✉️ ${settings.email}</div>` : ''}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:26px;font-weight:900;color:#dc2626;letter-spacing:-.03em">ORÇAMENTO</div>
+    <div style="font-size:13px;color:#444;font-weight:600">#${budget.id.slice(0,8).toUpperCase()}</div>
+    <div style="font-size:11px;color:#888;margin-top:2px">${format(new Date(budget.createdAt),'dd/MM/yyyy',{locale:ptBR})}</div>
+  </div>
+</div>
+
+${settings.headerText ? `<div style="background:#fff8f0;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e">${settings.headerText}</div>` : ''}
+
+<!-- CLIENT -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px">Cliente</div>
+    <div style="font-size:16px;font-weight:700">${budget.leadName}</div>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px">Condições</div>
+    <div style="font-size:12px;color:#374151">Validade: <strong>${budget.validity} dias</strong></div>
+    <div style="font-size:12px;color:#374151">Pagamento: <strong>${budget.paymentConditions}</strong></div>
+  </div>
+</div>
+
+<!-- ITEMS TABLE -->
+<table style="width:100%;border-collapse:collapse;margin-bottom:18px">
+  <thead>
+    <tr style="background:#1a1a2e;color:#fff">
+      <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.05em">DESCRIÇÃO</th>
+      <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;width:60px">QTD</th>
+      <th style="padding:10px 8px;text-align:center;font-size:11px;font-weight:700;width:50px">UN</th>
+      <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:700;width:100px">UNIT.</th>
+      <th style="padding:10px 12px;text-align:right;font-size:11px;font-weight:700;width:100px">TOTAL</th>
+    </tr>
+  </thead>
+  <tbody>${itemsHtml}</tbody>
+</table>
+
+<!-- TOTALS -->
+<div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+  <div style="min-width:280px">
+    ${budget.laborCost > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#64748b"><span>Mão de obra adicional</span><span>${fmt(budget.laborCost)}</span></div>` : ''}
+    ${budget.travelCost > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#64748b"><span>Deslocamento</span><span>${fmt(budget.travelCost)}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px;border-top:1px solid #e2e8f0;margin-top:4px"><span style="font-weight:600">Subtotal</span><span style="font-weight:600">${fmt(budget.subtotal)}</span></div>
+    ${discountAmount > 0 ? `<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;color:#dc2626"><span>Desconto</span><span>-${fmt(discountAmount)}</span></div>` : ''}
+    <div style="display:flex;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e,#2d2d5e);color:#fff;border-radius:10px;margin-top:6px">
+      <span style="font-size:16px;font-weight:900">TOTAL</span>
+      <span style="font-size:20px;font-weight:900;color:#f87171">${fmt(budget.total)}</span>
+    </div>
+  </div>
+</div>
+
+${budget.observations ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px"><strong>Observações:</strong> ${budget.observations}</div>` : ''}
+
+<!-- FOOTER -->
+<div style="display:grid;grid-template-columns:1fr auto;gap:20px;border-top:2px solid #e2e8f0;padding-top:16px;margin-top:8px">
+  <div>
+    ${settings.footerText ? `<div style="font-size:11px;color:#666;margin-bottom:10px">${settings.footerText}</div>` : ''}
+    <div style="margin-top:20px;border-top:1px solid #cbd5e1;padding-top:12px">
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:28px">Assinatura do responsável</div>
+      <div style="border-top:1px solid #374151;width:200px;padding-top:4px;font-size:10px;color:#374151">${settings.companyName}</div>
+    </div>
+  </div>
+  ${pixQr}
+</div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { toast.error('Permita popups para gerar o PDF'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
+export const Orcamentos: React.FC<{ type?: 'calhas' | 'esquadrias' }> = ({ type = 'calhas' }) => {
+  const {
+    budgets, leads, productions, quotePriceItems, quoteSettings,
+    currentUser, addBudget, updateBudget, addProduction, updateLeadStatus,
+    addNotification, addQuotePriceItem, updateQuotePriceItem, deleteQuotePriceItem,
+    updateQuoteSettings,
+  } = useStore();
+
+  // ── Access guard ────────────────────────────────────────────────────────────
+  const canAccess = currentUser && ALLOWED_ROLES.includes(currentUser.role);
+  const canSeePrice = currentUser && PRICE_VISIBLE_ROLES.includes(currentUser.role);
+
+  const [pageView, setPageView] = useState<'list' | 'new' | 'preview'>('list');
+  const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
+  const [activeSection, setActiveSection] = useState<ItemGroup>('calha');
+
+  // ── Form ───────────────────────────────────────────────────────────────────
+  const blankForm = {
+    leadId: '', items: [] as BudgetItem[],
+    laborCost: 0, travelCost: 0, discount: 0,
+    discountType: 'percentage' as 'percentage' | 'fixed',
+    validity: 15, paymentConditions: '50% entrada + 50% na entrega', observations: '',
+  };
+  const [formData, setFormData] = useState(blankForm);
+
+  // ── New item builder ───────────────────────────────────────────────────────
+  const blankItem = {
+    productLabel: 'Calha Platibanda',
+    group: 'calha' as ItemGroup,
+    hasAlu: true,
+    thickness: '0.50',
     cut: '300',
     color: 'Natural',
-    description: '',
+    customDescription: '',
     quantity: 1,
     unit: 'm',
     unitPrice: 0,
-  });
-
-  const [priceForm, setPriceForm] = useState({
-    name: 'Calha Platibanda',
-    category: 'calha' as QuotePriceItem['category'],
-    thickness: '0.5',
-    cut: '300',
-    color: 'Natural',
-    unit: 'm',
-    unitPrice: 0,
-  });
-
-  const thicknessOptions = ['0.5', '0.6', '0.7', '1.0'];
-  const cutOptions = ['150', '200', '250', '300', '330', '350', '400', '500', '600', '700', '800', '900', '1000', '1200'];
-  const colorOptions = ['Natural', 'Branco', 'Preto', 'Bronze', 'Grafite', 'Personalizada'];
-  const productOptions = [
-    { value: 'Calha Platibanda', label: 'Calha platibanda' },
-    { value: 'Calha Beiral', label: 'Calha beiral' },
-    { value: 'Calha Coletora', label: 'Calha coletora' },
-    { value: 'Calha de Meio', label: 'Calha de meio' },
-    { value: 'Rufo com Pingadeira', label: 'Rufo com Pingadeira' },
-    { value: 'Rufo Chapeu', label: 'Rufo chapeu' },
-    { value: 'Rufo de Acabamento', label: 'Rufo de acabamento' },
-    { value: 'Pingadeira com Rufo', label: 'Pingadeira com rufo' },
-    { value: 'Pingadeira de Muro', label: 'Pingadeira de muro' },
-    { value: 'Pingadeira de Fechamento', label: 'Pingadeira de fechamento' },
-    { value: 'Linha de Acessorios', label: 'Linha de acessorios' },
-    { value: 'Produto Avulso', label: 'Produto avulso' },
-    { value: 'Mao de Obra Manutencao', label: 'MÃO DE OBRA - MANUTENÃÃO' },
-    { value: 'Mao de Obra Instalacao', label: 'MÃO DE OBRA - INSTALAÃÃO' },
-    { value: 'Mao de Obra Pintura', label: 'MÃO DE OBRA - PINTURA' },
-    { value: 'Mao de Obra Remocao Telhas', label: 'MÃO DE OBRA - REMOÃÃO E REINSTALAÃÃO DE TELHAS' },
-  ];
-  const frameProductOptions = [
-    { value: 'Janela', label: 'Janela' },
-    { value: 'Porta', label: 'Porta' },
-    { value: 'Porta de correr', label: 'Porta de correr' },
-    { value: 'Basculante', label: 'Basculante' },
-    { value: 'Box', label: 'Box' },
-    { value: 'Guarda-corpo', label: 'Guarda-corpo' },
-    { value: 'Vidro', label: 'Vidro' },
-    { value: 'Acessorio', label: 'Acessorio' },
-    { value: 'Instalacao', label: 'Instalacao' },
-  ];
-
-  const quoteTypeConfig: Record<QuoteType, { label: string; description: string; categories: BudgetItem['category'][] }> = {
-    calhas: {
-      label: 'Calhas',
-      description: 'Calhas, rufos, pingadeiras, acessorios e instalacao',
-      categories: ['calha', 'rufo', 'pingadeira', 'acessorio', 'instalacao', 'outro'],
-    },
-    esquadrias: {
-      label: 'Esquadrias',
-      description: 'Portas, janelas, vidros, acessorios e instalacao',
-      categories: ['esquadria', 'vidro', 'acessorio', 'instalacao', 'outro'],
-    },
+    priceMode: 'manual' as 'saved' | 'manual',
+    priceItemId: '',
   };
+  const [newItem, setNewItem] = useState({ ...blankItem });
 
-  const currentProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
-  const currentPriceProductOptions = formData.quoteType === 'calhas' ? productOptions : frameProductOptions;
+  const activePriceItems = useMemo(() =>
+    quotePriceItems.filter(i => i.active), [quotePriceItems]);
 
-  const gutterProductNames: Record<string, string> = {
-    'Calha Platibanda': 'CALHA DE PLATIBANDA',
-    'Calha Beiral': 'CALHA DE BEIRAL',
-    'Calha Coletora': 'CALHA COLETORA',
-    'Calha de Meio': 'CALHA DE MEIO',
-    'Rufo com Pingadeira': 'RUFO COM PINGADEIRA',
-    'Rufo Chapeu': 'RUFO CHAPEU',
-    'Rufo de Acabamento': 'RUFO DE ACABAMENTO',
-    'Pingadeira com Rufo': 'PINGADEIRA COM RUFO',
-    'Pingadeira de Muro': 'PINGADEIRA DE MURO',
-    'Pingadeira de Fechamento': 'PINGADEIRA DE FECHAMENTO',
-    'Linha de Acessorios': 'LINHA DE ACESSORIOS',
-    'Produto Avulso': 'PRODUTO',
-    'Mao de Obra Manutencao': 'MÃO DE OBRA PARA MANUTENÃÃO',
-    'Mao de Obra Instalacao': 'MÃO DE OBRA PARA INSTALAÃÃO',
-    'Mao de Obra Pintura': 'MÃO DE OBRA PARA PINTURA',
-    'Mao de Obra Remocao Telhas': 'MÃO DE OBRA PARA REMOÃÃO E REINSTALAÃÃO DE TELHAS',
-  };
-
-  const buildGutterItemName = (product: string, thickness: string, cut: string, color: string) => {
-    const baseName = gutterProductNames[product] || product.toUpperCase();
-    const category = categoryFromProduct(product);
-    if (category === 'instalacao') return baseName;
-    return `${baseName} EM ALUMÃNIO ${thickness}MM C/${cut}MM NA COR ${color.toUpperCase()}`;
-  };
-
-  const buildMetalSheetDescription = () => {
-    return buildGutterItemName(newItem.product, newItem.thickness, newItem.cut, newItem.color);
-  };
-
-  const buildPriceItemName = () => {
-    if (formData.quoteType === 'esquadrias') {
-      return `${priceForm.name} ${priceForm.color}`.trim();
-    }
-
-    return buildGutterItemName(priceForm.name, priceForm.thickness, priceForm.cut, priceForm.color);
-  };
-
-  const categoryFromProduct = (product: string): BudgetItem['category'] => {
-    const normalized = product.toLowerCase();
-    if (normalized.includes('mao de obra') || normalized.includes('manutencao') || normalized.includes('pintura') || normalized.includes('telhas')) return 'instalacao';
-    if (normalized.includes('rufo')) return 'rufo';
-    if (normalized.includes('pingadeira')) return 'pingadeira';
-    if (normalized.includes('vidro') || normalized.includes('box') || normalized.includes('guarda')) return 'vidro';
-    if (normalized.includes('acessorio')) return 'acessorio';
-    if (normalized.includes('instal')) return 'instalacao';
-    if (normalized.includes('janela') || normalized.includes('porta') || normalized.includes('basculante')) return 'esquadria';
-    if (normalized.includes('calha') || normalized.includes('condutor')) return 'calha';
-    if (normalized.includes('acessorios') || normalized.includes('avulso')) return 'acessorio';
-    return 'outro';
-  };
-
-  const getBudgetType = (budget: Budget): QuoteType => {
-    if (budget.quoteType) return budget.quoteType;
-    const hasFrames = budget.items.some(item => ['esquadria', 'vidro', 'acessorio'].includes(item.category || ''));
-    return hasFrames ? 'esquadrias' : 'calhas';
-  };
-
-  const activePriceItems = quotePriceItems.filter(item =>
-    item.active && quoteTypeConfig[formData.quoteType].categories.includes(item.category || 'outro')
-  );
-  const filteredBudgets = budgets.filter(budget => getBudgetType(budget) === activeQuoteType);
-  const matchingPriceItem = activePriceItems.find((item) =>
-    item.name.toLowerCase().startsWith(newItem.product.toLowerCase()) &&
-    item.thickness === newItem.thickness &&
-    item.cut === newItem.cut &&
-    (item.color || 'Natural') === newItem.color
-  );
-
-  const setQuoteType = (quoteType: QuoteType) => {
-    const nextProduct = quoteType === 'calhas' ? 'Calha Platibanda' : 'Janela';
-    const nextUnit = quoteType === 'calhas' ? 'm' : 'un';
-
-    setFormData({ ...formData, quoteType, items: [] });
-    setNewItem({
-      priceMode: 'saved',
+  // Update group/unit when product changes
+  const handleProductChange = (label: string) => {
+    const def = PRODUCT_CATALOG.find(p => p.label === label);
+    if (!def) return;
+    setNewItem(prev => ({
+      ...prev,
+      productLabel: label,
+      group: def.group,
+      hasAlu: def.hasAluminium,
+      unit: def.defaultUnit,
       priceItemId: '',
-      category: quoteType === 'calhas' ? 'calha' : 'esquadria',
-      product: nextProduct,
-      thickness: quoteType === 'calhas' ? '0.5' : '',
-      cut: quoteType === 'calhas' ? '300' : '',
-      color: quoteType === 'calhas' ? 'Natural' : 'Branco',
-      description: '',
-      quantity: 1,
-      unit: nextUnit,
-      unitPrice: 0,
-    });
-    setPriceForm({
-      name: nextProduct,
-      category: quoteType === 'calhas' ? 'calha' : 'esquadria',
-      thickness: quoteType === 'calhas' ? '0.5' : '',
-      cut: quoteType === 'calhas' ? '300' : '',
-      color: quoteType === 'calhas' ? 'Natural' : 'Branco',
-      unit: nextUnit,
-      unitPrice: 0,
-    });
+    }));
   };
 
-  const handleSelectSavedPrice = (id: string) => {
-    const priceItem = quotePriceItems.find(item => item.id === id);
-    if (!priceItem) {
-      setNewItem({ ...newItem, priceItemId: id });
-      return;
+  // Auto-select saved price when colour/thickness/cut changes
+  const autoMatchPrice = useCallback((label: string, thickness: string, cut: string, color: string) => {
+    const desc = `${label} Alumínio ${thickness}mm C/${cut} ${color}`;
+    const match = activePriceItems.find(i => i.name === desc);
+    if (match) {
+      setNewItem(prev => ({ ...prev, priceMode: 'saved', priceItemId: match.id, unitPrice: match.unitPrice }));
     }
+  }, [activePriceItems]);
 
-    setNewItem({
-      ...newItem,
-      priceMode: 'saved',
-      priceItemId: id,
-      category: priceItem.category,
-      product: priceItem.name.split(' Aluminio ')[0] || priceItem.name,
-      thickness: priceItem.thickness || newItem.thickness,
-      cut: priceItem.cut || newItem.cut,
-      color: priceItem.color || newItem.color,
-      description: priceItem.name,
-      unit: priceItem.unit,
-      unitPrice: priceItem.unitPrice,
-    });
-  };
-
-  const handleSavePriceItem = () => {
-    if (!priceForm.name.trim() || priceForm.unitPrice <= 0) {
-      toast.error('Preencha produto e valor unitario');
-      return;
-    }
-
-    const item: QuotePriceItem = {
-      id: uuidv4(),
-      name: buildPriceItemName(),
-      category: categoryFromProduct(priceForm.name),
-      thickness: priceForm.thickness,
-      cut: priceForm.cut,
-      color: priceForm.color,
-      unit: priceForm.unit,
-      unitPrice: priceForm.unitPrice,
-      active: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    addQuotePriceItem(item);
-    toast.success('Preco salvo na tabela');
-  };
-
-  const calculateTotals = () => {
-    const itemsTotal = formData.items.reduce((sum, item) => sum + item.total, 0);
-    const subtotal = itemsTotal + formData.laborCost + formData.travelCost;
-    const discountAmount = formData.discountType === 'percentage' 
-      ? (subtotal * formData.discount) / 100
-      : formData.discount;
-    const total = subtotal - discountAmount;
-    return { itemsTotal, subtotal, discountAmount, total };
-  };
-
-  const getPaintItems = (quantity: number, unit: string, color: string): BudgetItem[] => {
-    if (color.toLowerCase() === 'natural') return [];
-
-    const paintQuantity = Math.max(1, quantity);
-    const paintUnit = unit || 'm';
-    const laborUnitPrice = 8;
-    const materialUnitPrice = 12;
-
-    return [
-      {
-        id: uuidv4(),
-        description: `Mao de obra para pintura ${color}`,
-        quantity: paintQuantity,
-        unit: paintUnit,
-        unitPrice: laborUnitPrice,
-        category: 'instalacao',
-        priceSource: 'manual',
-        total: paintQuantity * laborUnitPrice,
-      },
-      {
-        id: uuidv4(),
-        description: `Materiais necessarios para pintura ${color}`,
-        quantity: paintQuantity,
-        unit: paintUnit,
-        unitPrice: materialUnitPrice,
-        category: 'instalacao',
-        priceSource: 'manual',
-        total: paintQuantity * materialUnitPrice,
-      },
-    ];
-  };
+  const computedDescription = buildDescription(
+    newItem.productLabel, newItem.thickness, newItem.cut,
+    newItem.color, newItem.hasAlu, newItem.customDescription
+  );
 
   const handleAddItem = () => {
-    const description = formData.quoteType === 'calhas'
-      ? (newItem.description || buildMetalSheetDescription())
-      : newItem.description;
+    if (newItem.unitPrice <= 0) { toast.error('Informe o valor unitário'); return; }
 
-    const unitPrice = newItem.priceMode === 'saved' && matchingPriceItem
-      ? matchingPriceItem.unitPrice
-      : newItem.unitPrice;
-
-    if (!description || unitPrice <= 0) return;
-
-    const category = categoryFromProduct(newItem.product);
-    const item: BudgetItem = {
+    const desc = computedDescription;
+    const items: BudgetItem[] = [{
       id: uuidv4(),
-      description,
+      description: desc,
       quantity: newItem.quantity,
       unit: newItem.unit,
-      unitPrice,
-      category,
-      thickness: newItem.thickness,
-      cut: newItem.cut,
-      color: newItem.color,
+      unitPrice: newItem.unitPrice,
+      category: categoryFromGroup(newItem.group),
+      thickness: newItem.hasAlu ? newItem.thickness : undefined,
+      cut: newItem.hasAlu ? newItem.cut : undefined,
+      color: newItem.hasAlu ? newItem.color : undefined,
       priceSource: newItem.priceMode,
-      priceItemId: newItem.priceItemId || matchingPriceItem?.id || undefined,
-      total: newItem.quantity * unitPrice,
-    };
+      priceItemId: newItem.priceItemId || undefined,
+      total: newItem.quantity * newItem.unitPrice,
+    }];
 
-    const automaticItems = formData.quoteType === 'calhas' && ['calha', 'rufo', 'pingadeira', 'acessorio'].includes(category || '')
-      ? getPaintItems(newItem.quantity, newItem.unit, newItem.color)
-      : [];
+    // Auto-add paint items if non-Natural colour (aluminium products only)
+    if (newItem.hasAlu && needsPaintItems(newItem.color)) {
+      const alreadyHasPaintLabor = formData.items.some(i => i.description.startsWith(PAINT_LABOR_LABEL));
+      const alreadyHasPaintMat = formData.items.some(i => i.description.startsWith(PAINT_MATERIAL_LABEL));
 
-    setFormData({ ...formData, items: [...formData.items, item, ...automaticItems] });
-    if (automaticItems.length) {
-      toast.success('Pintura adicionada automaticamente');
+      const paintLaborPrice = activePriceItems.find(i => i.name === PAINT_LABOR_LABEL);
+      const paintMatPrice = activePriceItems.find(i => i.name === PAINT_MATERIAL_LABEL);
+
+      if (!alreadyHasPaintLabor) {
+        items.push({
+          id: uuidv4(),
+          description: `${PAINT_LABOR_LABEL} – ${newItem.color}`,
+          quantity: newItem.quantity,
+          unit: newItem.unit,
+          unitPrice: paintLaborPrice?.unitPrice ?? 0,
+          category: 'instalacao',
+          total: newItem.quantity * (paintLaborPrice?.unitPrice ?? 0),
+        });
+      }
+      if (!alreadyHasPaintMat) {
+        items.push({
+          id: uuidv4(),
+          description: `${PAINT_MATERIAL_LABEL} – ${newItem.color}`,
+          quantity: 1,
+          unit: 'kit',
+          unitPrice: paintMatPrice?.unitPrice ?? 0,
+          category: 'instalacao',
+          total: paintMatPrice?.unitPrice ?? 0,
+        });
+      }
+
+      if (paintLaborPrice || paintMatPrice) {
+        toast.success('Itens de pintura adicionados automaticamente');
+      } else {
+        toast(`Itens de pintura adicionados — configure os preços na Tabela de Calhas`, { icon: '🎨' });
+      }
     }
-    setNewItem({
-      category: formData.quoteType === 'calhas' ? 'calha' : 'esquadria',
-      priceMode: 'saved',
-      priceItemId: '',
-      product: formData.quoteType === 'calhas' ? 'Calha Platibanda' : 'Janela',
-      thickness: formData.quoteType === 'calhas' ? '0.5' : '',
-      cut: formData.quoteType === 'calhas' ? '300' : '',
-      color: formData.quoteType === 'calhas' ? 'Natural' : 'Branco',
-      description: '',
-      quantity: 1,
-      unit: formData.quoteType === 'calhas' ? 'm' : 'un',
-      unitPrice: 0,
-    });
+
+    setFormData(prev => ({ ...prev, items: [...prev.items, ...items] }));
+    setNewItem({ ...blankItem });
   };
 
-  const handleRemoveItem = (id: string) => {
-    setFormData({ ...formData, items: formData.items.filter(i => i.id !== id) });
-  };
+  const handleRemoveItem = (id: string) =>
+    setFormData(prev => ({ ...prev, items: prev.items.filter(i => i.id !== id) }));
 
+  // ── Totals ─────────────────────────────────────────────────────────────────
+  const totals = useMemo(() => {
+    const itemsTotal = formData.items.reduce((s, i) => s + i.total, 0);
+    const subtotal = itemsTotal + formData.laborCost + formData.travelCost;
+    const discountAmount = formData.discountType === 'percentage'
+      ? (subtotal * formData.discount) / 100
+      : formData.discount;
+    return { itemsTotal, subtotal, discountAmount, total: subtotal - discountAmount };
+  }, [formData]);
+
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const lead = leads.find(l => l.id === formData.leadId);
+    if (!lead || formData.items.length === 0) return;
 
-    const selectedLead = leads.find(l => l.id === formData.leadId);
-    if (!selectedLead || formData.items.length === 0) return;
-
-    const { subtotal, total } = calculateTotals();
-
-    const newBudget: Budget = {
+    const budget: Budget = {
       id: uuidv4(),
       leadId: formData.leadId,
-      leadName: selectedLead.name,
-      quoteType: formData.quoteType,
+      leadName: lead.name,
       items: formData.items,
       laborCost: formData.laborCost,
       travelCost: formData.travelCost,
       discount: formData.discount,
       discountType: formData.discountType,
-      subtotal,
-      total,
+      subtotal: totals.subtotal,
+      total: totals.total,
       validity: formData.validity,
       paymentConditions: formData.paymentConditions,
       observations: formData.observations,
@@ -406,858 +412,616 @@ export const Orcamentos: React.FC = () => {
       updatedAt: new Date(),
     };
 
-    addBudget(newBudget);
-    toast.success('OrÃ§amento criado com sucesso');
+    addBudget(budget);
+    toast.success('Orçamento criado com sucesso');
     setPageView('list');
-    resetForm();
+    setFormData(blankForm);
   };
 
-  const resetForm = () => {
-    setFormData({
-      quoteType: 'calhas',
-      leadId: '',
-      items: [],
-      laborCost: 0,
-      travelCost: 0,
-      discount: 0,
-      discountType: 'percentage',
-      validity: 15,
-      paymentConditions: '50% entrada + 50% na entrega',
-      observations: '',
-    });
+  // ── Budget actions ─────────────────────────────────────────────────────────
+  const handleSend = (b: Budget) => {
+    updateBudget(b.id, { status: 'sent', sentAt: new Date() });
+    updateLeadStatus(b.leadId, 'orcamento_enviado');
+    addNotification({ id: uuidv4(), type: 'info', title: 'Orçamento enviado', message: `Orçamento de ${b.leadName} marcado como enviado`, read: false, createdAt: new Date() });
+    toast.success('Orçamento enviado');
   };
 
-  const handleSendBudget = (budget: Budget) => {
-    updateBudget(budget.id, { status: 'sent', sentAt: new Date() });
-    updateLeadStatus(budget.leadId, 'orcamento_enviado');
-    addNotification({
-      id: uuidv4(),
-      type: 'info',
-      title: 'OrÃ§amento enviado',
-      message: `OrÃ§amento de ${budget.leadName} foi marcado como enviado`,
-      read: false,
-      createdAt: new Date(),
-    });
-    toast.success('OrÃ§amento marcado como enviado');
-  };
-
-  const handleApprove = (budget: Budget) => {
-    updateBudget(budget.id, { status: 'approved' });
-    updateLeadStatus(budget.leadId, 'producao');
-
-    const alreadyExists = productions.some((production) => production.budgetId === budget.id);
-    if (!alreadyExists) {
-      const estimatedEnd = new Date();
-      estimatedEnd.setDate(estimatedEnd.getDate() + 10);
-
-      addProduction({
-        id: uuidv4(),
-        budgetId: budget.id,
-        leadId: budget.leadId,
-        leadName: budget.leadName,
-        items: budget.items.map((item) => item.description),
-        currentStage: 'corte',
-        progress: 0,
-        startDate: new Date(),
-        estimatedEnd,
-        assignedTeam: ['3'],
-        history: [],
-        createdAt: new Date(),
-      });
+  const handleApprove = (b: Budget) => {
+    updateBudget(b.id, { status: 'approved' });
+    updateLeadStatus(b.leadId, 'producao');
+    if (!productions.some(p => p.budgetId === b.id)) {
+      const est = new Date(); est.setDate(est.getDate() + 10);
+      addProduction({ id: uuidv4(), budgetId: b.id, leadId: b.leadId, leadName: b.leadName, items: b.items.map(i => i.description), currentStage: 'corte', progress: 0, startDate: new Date(), estimatedEnd: est, assignedTeam: ['3'], history: [], createdAt: new Date() });
     }
+    addNotification({ id: uuidv4(), type: 'success', title: 'Orçamento aprovado', message: `${b.leadName} entrou em produção`, read: false, createdAt: new Date() });
+    toast.success('Aprovado — produção criada');
+  };
 
-    addNotification({
-      id: uuidv4(),
-      type: 'success',
-      title: 'OrÃ§amento aprovado',
-      message: `${budget.leadName} entrou em produÃ§Ã£o`,
-      read: false,
-      createdAt: new Date(),
+  const handleReject = (b: Budget) => {
+    updateBudget(b.id, { status: 'rejected' });
+    updateLeadStatus(b.leadId, 'negociacao');
+    toast.success('Orçamento rejeitado');
+  };
+
+  const handleWhatsApp = (b: Budget) => {
+    const lead = leads.find(l => l.id === b.leadId);
+    if (!lead) { toast.error('Cliente não encontrado'); return; }
+    const ok = openWhatsApp(lead.phone, buildBudgetText(b, quoteSettings));
+    if (!ok) toast.error('Telefone inválido');
+  };
+
+  const handleEmail = (b: Budget) => {
+    const lead = leads.find(l => l.id === b.leadId);
+    if (!lead?.email) { toast.error('Cliente sem e-mail'); return; }
+    window.location.href = `mailto:${lead.email}?subject=${encodeURIComponent(`Orçamento – ${b.leadName}`)}&body=${encodeURIComponent(buildBudgetText(b, quoteSettings))}`;
+  };
+
+  const handleCopy = async (b: Budget) => {
+    await copyText(buildBudgetText(b, quoteSettings));
+    toast.success('Texto copiado');
+  };
+
+  // ── Filters ────────────────────────────────────────────────────────────────
+  const isCalhas = type === 'calhas';
+  const filteredBudgets = budgets.filter(b => {
+    const hasCal = b.items.some(i => ['calha','rufo','pingadeira'].includes(i.category ?? ''));
+    const hasEsq = b.items.some(i => ['esquadria','janela','porta'].includes(i.category ?? ''));
+    return isCalhas ? (hasCal || (!hasEsq && !hasCal)) : hasEsq;
+  });
+
+  const statusCfg: Record<string, { label: string; color: string }> = {
+    draft:    { label: 'Rascunho', color: 'bg-gray-100 text-gray-700' },
+    sent:     { label: 'Enviado',  color: 'bg-blue-100 text-blue-700' },
+    approved: { label: 'Aprovado', color: 'bg-green-100 text-green-700' },
+    rejected: { label: 'Rejeitado',color: 'bg-red-100 text-red-700' },
+    expired:  { label: 'Expirado', color: 'bg-orange-100 text-orange-700' },
+  };
+
+  // ── Items grouped by category in form ─────────────────────────────────────
+  const formItemsByGroup = useMemo(() => {
+    const g: Partial<Record<ItemGroup | 'outro', BudgetItem[]>> = {};
+    formData.items.forEach(item => {
+      const key = (item.category as ItemGroup) || 'outro';
+      if (!g[key]) g[key] = [];
+      g[key]!.push(item);
     });
-    toast.success('OrÃ§amento aprovado e produÃ§Ã£o criada');
-  };
+    return g;
+  }, [formData.items]);
 
-  const handleReject = (budget: Budget) => {
-    updateBudget(budget.id, { status: 'rejected' });
-    updateLeadStatus(budget.leadId, 'negociacao');
-    toast.success('OrÃ§amento marcado como rejeitado');
-  };
+  // ── ACCESS DENIED ──────────────────────────────────────────────────────────
+  if (!canAccess) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+          <Lock size={32} className="text-red-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800">Acesso Restrito</h2>
+        <p className="text-gray-500 text-center max-w-sm">
+          Esta seção é acessível apenas para Administradores, Gerentes e Vendedores. <br />
+          Solicite acesso ao administrador do sistema.
+        </p>
+      </div>
+    );
+  }
 
-  const handlePreview = (budget: Budget) => {
-    setSelectedBudget(budget);
-    setPageView('preview');
-  };
+  // ── PRODUCT GROUPS for the form ────────────────────────────────────────────
+  const productsByGroup = useMemo(() => {
+    const g: Partial<Record<ItemGroup, string[]>> = {};
+    PRODUCT_CATALOG.forEach(p => {
+      if (!g[p.group]) g[p.group] = [];
+      g[p.group]!.push(p.label);
+    });
+    return g;
+  }, []);
 
-  const handleWhatsAppBudget = (budget: Budget) => {
-    const lead = leads.find(l => l.id === budget.leadId);
-    if (!lead) {
-      toast.error('Cliente nÃ£o encontrado');
-      return;
-    }
+  const currentProductDef = PRODUCT_CATALOG.find(p => p.label === newItem.productLabel) ?? PRODUCT_CATALOG[0];
 
-    const ok = openWhatsApp(lead.phone, buildBudgetText(budget, quoteSettings));
-    if (!ok) toast.error('Telefone invÃ¡lido para WhatsApp');
-  };
-
-  const handleEmailBudget = (budget: Budget) => {
-    const lead = leads.find(l => l.id === budget.leadId);
-    if (!lead?.email) {
-      toast.error('Cliente sem e-mail cadastrado');
-      return;
-    }
-
-    const subject = encodeURIComponent(`OrÃ§amento Marquinhos - ${budget.leadName}`);
-    const body = encodeURIComponent(buildBudgetText(budget, quoteSettings));
-    window.location.href = `mailto:${lead.email}?subject=${subject}&body=${body}`;
-  };
-
-  const handleDownloadBudget = (budget: Budget) => {
-    const lead = leads.find(l => l.id === budget.leadId);
-    const ok = openBudgetPdf(budget, quoteSettings, lead);
-    if (ok) toast.success('PDF aberto para impressao');
-    else toast.error('Permita pop-ups para gerar o PDF');
-  };
-
-  const handleCopyBudget = async (budget: Budget) => {
-    await copyText(buildBudgetText(budget, quoteSettings));
-    toast.success('OrÃ§amento copiado');
-  };
-
-  const statusConfig: Record<string, { label: string; color: string }> = {
-    draft: { label: 'Rascunho', color: 'bg-gray-100 text-gray-700' },
-    sent: { label: 'Enviado', color: 'bg-red-100 text-red-700' },
-    approved: { label: 'Aprovado', color: 'bg-red-100 text-red-700' },
-    rejected: { label: 'Rejeitado', color: 'bg-red-100 text-red-700' },
-    expired: { label: 'Expirado', color: 'bg-red-100 text-red-700' },
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-  };
-
+  // ═══════════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════════════════
   return (
     <div className="space-y-5 animate-fadeIn">
+
+      {/* ── LIST VIEW ───────────────────────────────────────────────────── */}
       {pageView === 'list' && <>
-      {!showNewModal && (
-        <>
-      {/* Header */}
+
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">
-            {filteredBudgets.length} {filteredBudgets.length === 1 ? 'orcamento' : 'orcamentos'} de {quoteTypeConfig[activeQuoteType].label.toLowerCase()}
+            {filteredBudgets.length} {filteredBudgets.length === 1 ? 'orçamento' : 'orçamentos'}
+            {isCalhas ? ' de calhas' : ' de esquadrias'}
           </h2>
-          <p className="text-sm text-gray-500">{quoteTypeConfig[activeQuoteType].description}</p>
+          <p className="text-sm text-gray-500">
+            {isCalhas ? 'Calhas · Rufos · Pingadeiras · Instalação' : 'Janelas · Portas · Esquadrias'}
+          </p>
         </div>
-        <Button onClick={() => { setQuoteType(activeQuoteType); setPageView('new'); }} icon={<Plus size={18} />}>
-          Novo Orcamento
+        <Button onClick={() => setPageView('new')} icon={<Plus size={18} />}>
+          {isCalhas ? 'Novo Orç. Calhas' : 'Novo Orç. Esquadrias'}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {(['calhas', 'esquadrias'] as QuoteType[]).map((type) => (
-          <button
-            key={type}
-            type="button"
-            onClick={() => setActiveQuoteType(type)}
-            className={`rounded-lg border p-4 text-left transition-colors ${
-              activeQuoteType === type
-                ? 'border-red-600 bg-red-50 text-red-900'
-                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-semibold">{quoteTypeConfig[type].label}</p>
-                <p className="text-sm opacity-75">{quoteTypeConfig[type].description}</p>
+      {/* ── Stats ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Rascunhos',    icon: FileText,     val: filteredBudgets.filter(b=>b.status==='draft').length,    cls: 'bg-gray-100 text-gray-600' },
+          { label: 'Enviados',     icon: Send,         val: filteredBudgets.filter(b=>b.status==='sent').length,     cls: 'bg-blue-100 text-blue-600' },
+          { label: 'Aprovados',    icon: CheckCircle,  val: filteredBudgets.filter(b=>b.status==='approved').length, cls: 'bg-green-100 text-green-600' },
+          { label: 'Total Aprov.', icon: DollarSign,   val: canSeePrice ? formatCurrency(filteredBudgets.filter(b=>b.status==='approved').reduce((s,b)=>s+b.total,0)) : '––', cls: 'bg-red-100 text-red-600' },
+        ].map(s => (
+          <Card key={s.label} padding="sm">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-lg ${s.cls.split(' ').slice(0,1).join(' ')}`}>
+                <s.icon size={20} className={s.cls.split(' ').slice(1).join(' ')} />
               </div>
-              <Badge className={activeQuoteType === type ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}>
-                {budgets.filter(budget => getBudgetType(budget) === type).length}
-              </Badge>
+              <div>
+                <p className="text-2xl font-bold">{s.val}</p>
+                <p className="text-xs text-gray-500">{s.label}</p>
+              </div>
             </div>
-          </button>
+          </Card>
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card padding="sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <FileText size={20} className="text-gray-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'draft').length}</p>
-              <p className="text-xs text-gray-500">Rascunhos</p>
-            </div>
-          </div>
-        </Card>
-        <Card padding="sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Send size={20} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'sent').length}</p>
-              <p className="text-xs text-gray-500">Enviados</p>
-            </div>
-          </div>
-        </Card>
-        <Card padding="sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <CheckCircle size={20} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{filteredBudgets.filter(b => b.status === 'approved').length}</p>
-              <p className="text-xs text-gray-500">Aprovados</p>
-            </div>
-          </div>
-        </Card>
-        <Card padding="sm">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <DollarSign size={20} className="text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {formatCurrency(filteredBudgets.filter(b => b.status === 'approved').reduce((sum, b) => sum + b.total, 0))}
-              </p>
-              <p className="text-xs text-gray-500">Total Aprovado</p>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Budgets List */}
+      {/* ── Budget List ─────────────────────────────────────────────────── */}
       <div className="grid gap-4">
         {filteredBudgets.length === 0 ? (
           <Card className="text-center py-10">
             <FileText size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orÃ§amento</h3>
-            <p className="text-gray-500 mb-4">Crie seu primeiro orcamento de {quoteTypeConfig[activeQuoteType].label.toLowerCase()}</p>
-            <Button onClick={() => { setQuoteType(activeQuoteType); setPageView('new'); }} icon={<Plus size={18} />}>
-              Criar Orcamento
-            </Button>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum orçamento</h3>
+            <Button onClick={() => setPageView('new')} icon={<Plus size={18} />}>Criar Orçamento</Button>
           </Card>
-        ) : (
-          filteredBudgets.map((budget) => (
-            <Card key={budget.id} hover padding="none">
-              <div className="p-5">
-                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-semibold text-gray-900">{budget.leadName}</h3>
-                      <Badge className={statusConfig[budget.status]?.color}>
-                        {statusConfig[budget.status]?.label}
-                      </Badge>
-                      <Badge className="bg-gray-100 text-gray-700">
-                        {quoteTypeConfig[getBudgetType(budget)].label}
-                      </Badge>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-500">
-                      <span>{budget.items.length} itens</span>
-                      <span>Criado em {format(new Date(budget.createdAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                      {budget.sentAt && (
-                        <span>Enviado em {format(new Date(budget.sentAt), 'dd/MM/yyyy', { locale: ptBR })}</span>
-                      )}
-                    </div>
+        ) : filteredBudgets.map(budget => (
+          <Card key={budget.id} hover padding="none">
+            <div className="p-5">
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <h3 className="font-semibold text-gray-900">{budget.leadName}</h3>
+                    <Badge className={statusCfg[budget.status]?.color}>{statusCfg[budget.status]?.label}</Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(budget.total)}</p>
-                    <p className="text-sm text-gray-500">Validade: {budget.validity} dias</p>
+                  <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                    <span>{budget.items.length} itens</span>
+                    <span>{format(new Date(budget.createdAt),'dd/MM/yyyy',{locale:ptBR})}</span>
+                    {budget.sentAt && <span>Enviado {format(new Date(budget.sentAt),'dd/MM/yyyy',{locale:ptBR})}</span>}
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
-                  <Button size="sm" variant="ghost" onClick={() => handlePreview(budget)} icon={<Eye size={16} />}>
-                    Visualizar
-                  </Button>
-                  {budget.status === 'draft' && (
-                    <Button size="sm" variant="primary" onClick={() => handleSendBudget(budget)} icon={<Send size={16} />}>
-                      Enviar
-                    </Button>
-                  )}
-                  {budget.status === 'sent' && (
-                    <>
-                      <Button size="sm" variant="success" onClick={() => handleApprove(budget)} icon={<CheckCircle size={16} />}>
-                        Aprovar
-                      </Button>
-                      <Button size="sm" variant="danger" onClick={() => handleReject(budget)} icon={<XCircle size={16} />}>
-                        Rejeitar
-                      </Button>
-                    </>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => handleWhatsAppBudget(budget)} icon={<MessageSquare size={16} />}>
-                    WhatsApp
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleEmailBudget(budget)} icon={<Mail size={16} />}>
-                    E-mail
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDownloadBudget(budget)} icon={<Download size={16} />}>
-                    PDF
-                  </Button>
+                <div className="text-right shrink-0">
+                  {canSeePrice
+                    ? <p className="text-2xl font-bold text-gray-900">{formatCurrency(budget.total)}</p>
+                    : <p className="text-sm text-gray-400 flex items-center gap-1"><Lock size={14}/> valor oculto</p>
+                  }
+                  <p className="text-sm text-gray-500">Validade: {budget.validity} dias</p>
                 </div>
               </div>
-            </Card>
-          ))
-        )}
+
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-gray-100">
+                <Button size="sm" variant="ghost" onClick={() => { setSelectedBudget(budget); setPageView('preview'); }} icon={<Eye size={15}/>}>Visualizar</Button>
+                {budget.status === 'draft' && <Button size="sm" variant="primary" onClick={() => handleSend(budget)} icon={<Send size={15}/>}>Enviar</Button>}
+                {budget.status === 'sent' && <>
+                  <Button size="sm" variant="success" onClick={() => handleApprove(budget)} icon={<CheckCircle size={15}/>}>Aprovar</Button>
+                  <Button size="sm" variant="danger" onClick={() => handleReject(budget)} icon={<XCircle size={15}/>}>Rejeitar</Button>
+                </>}
+                <Button size="sm" variant="ghost" onClick={() => handleWhatsApp(budget)} icon={<MessageSquare size={15}/>}>WhatsApp</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleEmail(budget)} icon={<Mail size={15}/>}>E-mail</Button>
+                <Button size="sm" variant="ghost" onClick={() => generatePDF(budget, quoteSettings)} icon={<Printer size={15}/>}>PDF</Button>
+                <Button size="sm" variant="ghost" onClick={() => handleCopy(budget)} icon={<Copy size={15}/>}>Copiar</Button>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
-        </>
-      )}
 
-      {showNewModal && (
-        <div className="space-y-5">
-          <div className="flex flex-col gap-3 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Novo Orcamento de {quoteTypeConfig[formData.quoteType].label}
-              </h2>
-              <p className="text-sm text-gray-500">{quoteTypeConfig[formData.quoteType].description}</p>
+      </> /* end list view */}
+
+
+      {/* ══════════════════════════════════════════════════════════════════
+          NEW BUDGET — FULL PAGE VIEW
+      ══════════════════════════════════════════════════════════════════ */}
+      {pageView === 'new' && (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setPageView('list'); setFormData(blankForm); }} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <ChevronLeft size={18}/>
+            Voltar para {isCalhas ? 'Orçamentos de Calhas' : 'Orçamentos de Esquadrias'}
+          </button>
+          <h2 className="text-lg font-bold text-gray-900">{isCalhas ? '📋 Novo Orçamento de Calhas' : '📋 Novo Orçamento de Esquadrias'}</h2>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+
+          {/* ── Company settings (collapsed) ────────────────────────── */}
+          <details className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden group">
+            <summary className="flex items-center gap-2 px-4 py-3 cursor-pointer font-semibold text-sm text-gray-700 select-none">
+              <Settings2 size={16} className="text-gray-500"/> Dados da empresa &amp; emissão
+              <ChevronDown size={15} className="ml-auto text-gray-400 group-open:rotate-180 transition-transform"/>
+            </summary>
+            <div className="px-4 pb-4 grid grid-cols-2 sm:grid-cols-3 gap-3 border-t border-gray-200">
+              <Input label="Empresa" value={quoteSettings.companyName} onChange={e=>updateQuoteSettings({companyName:e.target.value})}/>
+              <Input label="CNPJ / CPF" value={quoteSettings.document} onChange={e=>updateQuoteSettings({document:e.target.value})}/>
+              <Input label="Telefone" value={quoteSettings.phone||''} onChange={e=>updateQuoteSettings({phone:e.target.value})}/>
+              <Input label="E-mail" value={(quoteSettings as any).email||''} onChange={e=>updateQuoteSettings({email:e.target.value} as any)}/>
+              <Input label="Chave PIX" value={quoteSettings.pixKey||''} onChange={e=>updateQuoteSettings({pixKey:e.target.value})}/>
+              <Input label="URL da logo" value={quoteSettings.logoUrl||''} onChange={e=>updateQuoteSettings({logoUrl:e.target.value})}/>
+              <div className="col-span-2 sm:col-span-3">
+                <TextArea label="Texto do cabeçalho" rows={2} value={quoteSettings.headerText} onChange={e=>updateQuoteSettings({headerText:e.target.value})}/>
+              </div>
+              <div className="col-span-2 sm:col-span-3">
+                <TextArea label="Texto do rodapé" rows={2} value={quoteSettings.footerText} onChange={e=>updateQuoteSettings({footerText:e.target.value})}/>
+              </div>
             </div>
-            <Button type="button" variant="ghost" onClick={() => setPageView('list')}>
-              Voltar para orcamentos
-            </Button>
-          </div>
+          </details>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {(['calhas', 'esquadrias'] as QuoteType[]).map((type) => (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setQuoteType(type)}
-                className={`rounded-lg border p-4 text-left transition-colors ${
-                  formData.quoteType === type
-                    ? 'border-red-600 bg-red-50 text-red-900'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <p className="font-semibold">{quoteTypeConfig[type].label}</p>
-                <p className="text-sm opacity-75">{quoteTypeConfig[type].description}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Client Selection */}
-          <Select
-            label="Cliente *"
-            options={[
-              { value: '', label: 'Selecione um cliente' },
-              ...leads.map(lead => ({ value: lead.id, label: `${lead.name} - ${lead.service}` }))
-            ]}
+          {/* ── Client ──────────────────────────────────────────────── */}
+          <Select label="Cliente *" required
+            options={[{value:'',label:'Selecione um cliente'},...leads.map(l=>({value:l.id,label:`${l.name} – ${l.service}`}))]}
             value={formData.leadId}
-            onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
-            required
-          />
+            onChange={e=>setFormData(p=>({...p,leadId:e.target.value}))}/>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card padding="sm">
-              <h4 className="font-medium text-gray-900 mb-3">Emissao do orcamento</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Input
-                  label="Nome da empresa"
-                  value={quoteSettings.companyName}
-                  onChange={(e) => updateQuoteSettings({ companyName: e.target.value })}
-                />
-                <Input
-                  label="Documento"
-                  value={quoteSettings.document}
-                  onChange={(e) => updateQuoteSettings({ document: e.target.value })}
-                />
-                <Input
-                  label="URL da logo"
-                  value={quoteSettings.logoUrl || ''}
-                  onChange={(e) => updateQuoteSettings({ logoUrl: e.target.value })}
-                />
-                <Input
-                  label="Telefone"
-                  value={quoteSettings.phone || ''}
-                  onChange={(e) => updateQuoteSettings({ phone: e.target.value })}
-                />
-                <Input
-                  label="Chave PIX"
-                  value={quoteSettings.pixKey || ''}
-                  onChange={(e) => updateQuoteSettings({ pixKey: e.target.value })}
-                />
+          {/* ── Item builder ────────────────────────────────────────── */}
+          <div className="rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-2 bg-gray-800 text-white px-4 py-3">
+              <Package size={16}/>
+              <span className="font-semibold text-sm">Adicionar Item</span>
+            </div>
+
+            {/* Group tabs */}
+            <div className="flex overflow-x-auto border-b border-gray-200 bg-gray-50">
+              {(Object.entries(GROUP_LABELS) as [ItemGroup, string][]).map(([g, lbl]) => (
+                <button key={g} type="button"
+                  onClick={() => {
+                    setActiveSection(g);
+                    const firstProd = PRODUCT_CATALOG.find(p=>p.group===g);
+                    if (firstProd) handleProductChange(firstProd.label);
+                  }}
+                  className={`shrink-0 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                    activeSection===g ? 'border-red-600 text-red-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            <div className="p-4 bg-white">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Product dropdown */}
+                <div className="sm:col-span-2 lg:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Produto</label>
+                  <select
+                    value={newItem.productLabel}
+                    onChange={e => handleProductChange(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300"
+                  >
+                    {(productsByGroup[activeSection] ?? []).map(lbl => (
+                      <option key={lbl} value={lbl}>{lbl}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Aluminium specs */}
+                {currentProductDef.hasAluminium && <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Espessura</label>
+                    <select value={newItem.thickness}
+                      onChange={e => { setNewItem(p=>({...p,thickness:e.target.value})); autoMatchPrice(newItem.productLabel,e.target.value,newItem.cut,newItem.color); }}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300">
+                      {THICKNESS_OPTS.map(v=><option key={v} value={v}>{v}mm</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Corte</label>
+                    <select value={newItem.cut}
+                      onChange={e => { setNewItem(p=>({...p,cut:e.target.value})); autoMatchPrice(newItem.productLabel,newItem.thickness,e.target.value,newItem.color); }}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300">
+                      {CUT_OPTS.map(v=><option key={v} value={v}>C/{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      Cor / Acabamento
+                      {needsPaintItems(newItem.color) && <span className="ml-1 text-xs text-orange-600 font-bold">🎨 +pintura</span>}
+                    </label>
+                    <select value={newItem.color}
+                      onChange={e => { setNewItem(p=>({...p,color:e.target.value})); autoMatchPrice(newItem.productLabel,newItem.thickness,newItem.cut,e.target.value); }}
+                      className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${
+                        needsPaintItems(newItem.color) ? 'border-orange-300 bg-orange-50 focus:border-orange-400 focus:ring-orange-200' : 'border-gray-300 focus:border-red-400 focus:ring-red-300'
+                      }`}>
+                      {COLOR_OPTS.map(v=><option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                </>}
+
+                {/* Qty + Unit + Price */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Qtd</label>
+                  <input type="number" min={0.01} step={0.01} value={newItem.quantity}
+                    onChange={e=>setNewItem(p=>({...p,quantity:Number(e.target.value)}))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Unidade</label>
+                  <select value={newItem.unit} onChange={e=>setNewItem(p=>({...p,unit:e.target.value}))}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300">
+                    {UNIT_OPTS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Valor Unit. (R$)</label>
+                  <input type="number" min={0} step={0.01} value={newItem.unitPrice||''}
+                    onChange={e=>setNewItem(p=>({...p,unitPrice:Number(e.target.value),priceMode:'manual'}))}
+                    placeholder="0,00"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300"/>
+                </div>
+
+                {/* Tabela de preços quick-select */}
                 <div className="sm:col-span-2">
-                  <TextArea
-                    label="Texto do cabecalho"
-                    rows={2}
-                    value={quoteSettings.headerText}
-                    onChange={(e) => updateQuoteSettings({ headerText: e.target.value })}
-                  />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Ou selecionar da tabela</label>
+                  <select value={newItem.priceItemId}
+                    onChange={e => {
+                      const item = quotePriceItems.find(i=>i.id===e.target.value);
+                      if (item) setNewItem(p=>({...p,priceMode:'saved',priceItemId:item.id,unitPrice:item.unitPrice}));
+                    }}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-1 focus:ring-red-300">
+                    <option value="">— escolher da tabela de preços —</option>
+                    {activePriceItems.map(i=><option key={i.id} value={i.id}>{i.name} · {formatCurrency(i.unitPrice)}/{i.unit}</option>)}
+                  </select>
                 </div>
-                <div className="sm:col-span-2">
-                  <TextArea
-                    label="Texto final"
-                    rows={2}
-                    value={quoteSettings.footerText}
-                    onChange={(e) => updateQuoteSettings({ footerText: e.target.value })}
-                  />
-                </div>
-              </div>
-            </Card>
 
-            <Card padding="sm">
-              <h4 className="font-medium text-gray-900 mb-3">Tabela de precos</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <Select
-                  label="Produto"
-                  options={currentPriceProductOptions}
-                  value={priceForm.name}
-                  onChange={(e) => setPriceForm({ ...priceForm, name: e.target.value, category: categoryFromProduct(e.target.value) })}
-                />
-                {formData.quoteType === 'calhas' && (
-                  <>
-                    <Select
-                      label="Espessura"
-                      options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
-                      value={priceForm.thickness}
-                      onChange={(e) => setPriceForm({ ...priceForm, thickness: e.target.value })}
-                    />
-                    <Select
-                      label="Corte"
-                      options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
-                      value={priceForm.cut}
-                      onChange={(e) => setPriceForm({ ...priceForm, cut: e.target.value })}
-                    />
-                  </>
-                )}
-                <Select
-                  label="Cor"
-                  options={colorOptions.map(value => ({ value, label: value }))}
-                  value={priceForm.color}
-                  onChange={(e) => setPriceForm({ ...priceForm, color: e.target.value })}
-                />
-                <Select
-                  label="Unidade"
-                  options={[
-                    { value: 'm', label: 'm' },
-                    { value: 'un', label: 'un' },
-                    { value: 'kit', label: 'kit' },
-                  ]}
-                  value={priceForm.unit}
-                  onChange={(e) => setPriceForm({ ...priceForm, unit: e.target.value })}
-                />
-                <Input
-                  label="Valor unitario"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={priceForm.unitPrice || ''}
-                  onChange={(e) => setPriceForm({ ...priceForm, unitPrice: Number(e.target.value) })}
-                />
-                <div className="col-span-2">
-                  <Button type="button" fullWidth onClick={handleSavePriceItem}>
-                    Salvar preco na tabela
-                  </Button>
+                {/* Description preview */}
+                <div className="sm:col-span-2 lg:col-span-4">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Descrição (auto-gerada · editável)</label>
+                  <input value={newItem.customDescription || computedDescription}
+                    onChange={e=>setNewItem(p=>({...p,customDescription:e.target.value}))}
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 focus:border-red-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-red-300"/>
                 </div>
               </div>
-              <div className="mt-3 max-h-32 space-y-2 overflow-auto">
-                {quotePriceItems.length === 0 ? (
-                  <p className="text-sm text-gray-500">Nenhum preco salvo ainda.</p>
-                ) : (
-                  quotePriceItems.slice(0, 6).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm">
-                      <span className="truncate">{item.name} - {formatCurrency(item.unitPrice)}/{item.unit}</span>
-                      <div className="flex gap-1">
-                        <button type="button" className="text-gray-500 hover:text-red-700" onClick={() => updateQuotePriceItem(item.id, { active: !item.active })}>
-                          {item.active ? 'Pausar' : 'Ativar'}
-                        </button>
-                        <button type="button" className="text-red-600 hover:text-red-800" onClick={() => deleteQuotePriceItem(item.id)}>
-                          Excluir
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
-          </div>
 
-          {/* Items Section */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <Package size={18} />
-              Itens do OrÃ§amento
-            </h4>
-
-            {/* Add Item Form */}
-            <div className="mb-4 rounded-lg bg-gray-50 p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-3">
-                <Select
-                  label="Tipo de valor"
-                  options={[
-                    { value: 'saved', label: 'Usar tabela' },
-                    { value: 'manual', label: 'Valor manual' },
-                  ]}
-                  value={newItem.priceMode}
-                  onChange={(e) => setNewItem({ ...newItem, priceMode: e.target.value as 'saved' | 'manual', priceItemId: '' })}
-                />
-                <Select
-                  label="Preco salvo"
-                  options={[
-                    { value: '', label: matchingPriceItem ? `${matchingPriceItem.name} - ${formatCurrency(matchingPriceItem.unitPrice)}/m` : (activePriceItems.length ? 'Escolha um preco salvo' : 'Nenhum preco salvo') },
-                    ...activePriceItems.map(item => ({ value: item.id, label: `${item.name} - ${formatCurrency(item.unitPrice)}/${item.unit}` })),
-                  ]}
-                  value={newItem.priceItemId}
-                  onChange={(e) => handleSelectSavedPrice(e.target.value)}
-                  disabled={newItem.priceMode !== 'saved' || activePriceItems.length === 0}
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                <Select
-                  label="Produto"
-                  options={currentProductOptions}
-                  value={newItem.product}
-                  onChange={(e) => setNewItem({ ...newItem, product: e.target.value, category: categoryFromProduct(e.target.value) })}
-                />
-                {formData.quoteType === 'calhas' && (
-                  <>
-                    <Select
-                      label="Espessura"
-                      options={thicknessOptions.map(value => ({ value, label: `${value}mm` }))}
-                      value={newItem.thickness}
-                      onChange={(e) => setNewItem({ ...newItem, thickness: e.target.value })}
-                    />
-                    <Select
-                      label="Corte"
-                      options={cutOptions.map(value => ({ value, label: `C/${value}` }))}
-                      value={newItem.cut}
-                      onChange={(e) => setNewItem({ ...newItem, cut: e.target.value })}
-                    />
-                  </>
-                )}
-                <Select
-                  label="Cor / acabamento"
-                  options={colorOptions.map(value => ({ value, label: value }))}
-                  value={newItem.color}
-                  onChange={(e) => setNewItem({ ...newItem, color: e.target.value })}
-                />
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 xl:grid-cols-[1fr_120px_120px_160px_220px] gap-3">
-                <Input
-                  label="Descricao do item"
-                  placeholder={formData.quoteType === 'calhas' ? buildMetalSheetDescription() : 'Ex: Janela 2 folhas 1,20 x 1,00 com vidro incolor'}
-                  value={newItem.description}
-                  onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
-                />
-                <Input
-                  label="Qtd"
-                  type="number"
-                  value={newItem.quantity}
-                  onChange={(e) => setNewItem({ ...newItem, quantity: Number(e.target.value) })}
-                  min={1}
-                />
-                <Select
-                  label="Un."
-                  options={[
-                    { value: 'm', label: 'm' },
-                    { value: 'un', label: 'un' },
-                    { value: 'm2', label: 'm2' },
-                    { value: 'kit', label: 'kit' },
-                  ]}
-                  value={newItem.unit}
-                  onChange={(e) => setNewItem({ ...newItem, unit: e.target.value })}
-                />
-                <Input
-                  label="Valor unitario"
-                  type="number"
-                  placeholder="R$ Unit"
-                  value={newItem.priceMode === 'saved' && matchingPriceItem ? matchingPriceItem.unitPrice : (newItem.unitPrice || '')}
-                  onChange={(e) => setNewItem({ ...newItem, unitPrice: Number(e.target.value) })}
-                  min={0}
-                  step={0.01}
-                  disabled={newItem.priceMode === 'saved' && Boolean(matchingPriceItem)}
-                />
-                <div className="flex items-end">
-                  <Button type="button" onClick={handleAddItem} className="w-full">
-                    <Plus size={18} />
-                    Adicionar item
-                  </Button>
-                </div>
+              {/* Preview total */}
+              <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 border border-gray-200 px-4 py-2.5">
+                <span className="text-sm text-gray-500">
+                  Subtotal item: <strong className="text-gray-900">{formatCurrency(newItem.quantity * newItem.unitPrice)}</strong>
+                  {needsPaintItems(newItem.color) && newItem.hasAlu && (
+                    <span className="ml-2 text-xs text-orange-600">+ itens de pintura serão adicionados</span>
+                  )}
+                </span>
+                <Button type="button" size="sm" onClick={handleAddItem} icon={<Plus size={15}/>}>
+                  Adicionar ao orçamento
+                </Button>
               </div>
             </div>
-            {/* Items List */}
-            {formData.items.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left p-3">DescriÃ§Ã£o</th>
-                      <th className="text-center p-3">Qtd</th>
-                      <th className="text-center p-3">Un</th>
-                      <th className="text-right p-3">Unit.</th>
-                      <th className="text-right p-3">Total</th>
-                      <th className="p-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formData.items.map((item) => (
-                      <tr key={item.id} className="border-t">
-                        <td className="p-3">{item.description}</td>
-                        <td className="text-center p-3">{item.quantity}</td>
-                        <td className="text-center p-3">{item.unit}</td>
-                        <td className="text-right p-3">{formatCurrency(item.unitPrice)}</td>
-                        <td className="text-right p-3 font-medium">{formatCurrency(item.total)}</td>
-                        <td className="p-3">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
 
-          {/* Costs */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Input
-              label="MÃ£o de obra"
-              type="number"
-              value={formData.laborCost || ''}
-              onChange={(e) => setFormData({ ...formData, laborCost: Number(e.target.value) })}
-              min={0}
-              step={0.01}
-              icon={<DollarSign size={16} />}
-            />
-            <Input
-              label="Deslocamento"
-              type="number"
-              value={formData.travelCost || ''}
-              onChange={(e) => setFormData({ ...formData, travelCost: Number(e.target.value) })}
-              min={0}
-              step={0.01}
-              icon={<DollarSign size={16} />}
-            />
-            <Input
-              label="Desconto"
-              type="number"
-              value={formData.discount || ''}
-              onChange={(e) => setFormData({ ...formData, discount: Number(e.target.value) })}
-              min={0}
-              icon={formData.discountType === 'percentage' ? <Percent size={16} /> : <DollarSign size={16} />}
-            />
-            <Select
-              label="Tipo Desconto"
-              options={[
-                { value: 'percentage', label: 'Percentual' },
-                { value: 'fixed', label: 'Valor Fixo' },
-              ]}
-              value={formData.discountType}
-              onChange={(e) => setFormData({ ...formData, discountType: e.target.value as 'percentage' | 'fixed' })}
-            />
-          </div>
-
-          {/* Summary */}
+          {/* ── Items table ──────────────────────────────────────────── */}
           {formData.items.length > 0 && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Calculator size={18} />
-                <h4 className="font-medium">Resumo</h4>
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                <span className="font-semibold text-sm text-gray-800">{formData.items.length} itens adicionados</span>
+                <span className="text-sm text-gray-500 font-medium">{formatCurrency(totals.itemsTotal)}</span>
+              </div>
+
+              {/* Grouped by category */}
+              {(Object.entries(formItemsByGroup) as [ItemGroup | 'outro', BudgetItem[]][]).map(([grp, items]) => (
+                <div key={grp}>
+                  <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white px-4 py-1.5 text-xs font-bold uppercase tracking-wide">
+                    {GROUP_LABELS[grp as ItemGroup] || grp}
+                  </div>
+                  {items.map(item => (
+                    <div key={item.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 group">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{item.description}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{item.quantity} {item.unit} × {canSeePrice ? formatCurrency(item.unitPrice) : '••••'}</p>
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 shrink-0">
+                        {canSeePrice ? formatCurrency(item.total) : '••••'}
+                      </span>
+                      <button type="button" onClick={() => handleRemoveItem(item.id)}
+                        className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                        <Trash2 size={15}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Extra costs + discount ───────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Input label="Deslocamento (R$)" type="number" min={0} step={0.01}
+              value={formData.travelCost||''} onChange={e=>setFormData(p=>({...p,travelCost:Number(e.target.value)}))}
+              icon={<DollarSign size={15}/>}/>
+            <Input label="Desconto" type="number" min={0} step={0.01}
+              value={formData.discount||''} onChange={e=>setFormData(p=>({...p,discount:Number(e.target.value)}))}
+              icon={formData.discountType==='percentage'?<Percent size={15}/>:<DollarSign size={15}/>}/>
+            <Select label="Tipo desconto"
+              options={[{value:'percentage',label:'Percentual %'},{value:'fixed',label:'Valor fixo R$'}]}
+              value={formData.discountType}
+              onChange={e=>setFormData(p=>({...p,discountType:e.target.value as any}))}/>
+            <Input label="Validade (dias)" type="number" min={1}
+              value={formData.validity} onChange={e=>setFormData(p=>({...p,validity:Number(e.target.value)}))}/>
+          </div>
+
+          <Input label="Condições de pagamento"
+            value={formData.paymentConditions}
+            onChange={e=>setFormData(p=>({...p,paymentConditions:e.target.value}))}/>
+
+          <TextArea label="Observações" rows={2}
+            value={formData.observations}
+            onChange={e=>setFormData(p=>({...p,observations:e.target.value}))}/>
+
+          {/* ── Totals summary ───────────────────────────────────────── */}
+          {formData.items.length > 0 && (
+            <div className="rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 text-white p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Calculator size={18} className="text-red-400"/>
+                <h4 className="font-bold">Resumo do Orçamento</h4>
               </div>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Itens</span>
-                  <span>{formatCurrency(calculateTotals().itemsTotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>MÃ£o de obra</span>
-                  <span>{formatCurrency(formData.laborCost)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Deslocamento</span>
-                  <span>{formatCurrency(formData.travelCost)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(calculateTotals().subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-red-600">
-                  <span>Desconto</span>
-                  <span>-{formatCurrency(calculateTotals().discountAmount)}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total</span>
-                  <span className="text-red-600">{formatCurrency(calculateTotals().total)}</span>
+                <div className="flex justify-between text-gray-300"><span>Itens</span><span>{formatCurrency(totals.itemsTotal)}</span></div>
+                {formData.travelCost > 0 && <div className="flex justify-between text-gray-300"><span>Deslocamento</span><span>{formatCurrency(formData.travelCost)}</span></div>}
+                <div className="flex justify-between text-gray-200 font-medium border-t border-white/10 pt-2"><span>Subtotal</span><span>{formatCurrency(totals.subtotal)}</span></div>
+                {totals.discountAmount > 0 && <div className="flex justify-between text-red-400"><span>Desconto</span><span>-{formatCurrency(totals.discountAmount)}</span></div>}
+                <div className="flex justify-between text-xl font-black border-t border-white/20 pt-3 mt-1">
+                  <span>TOTAL</span>
+                  <span className="text-red-400">{formatCurrency(totals.total)}</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Additional Info */}
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Validade (dias)"
-              type="number"
-              value={formData.validity}
-              onChange={(e) => setFormData({ ...formData, validity: Number(e.target.value) })}
-              min={1}
-            />
-            <Input
-              label="CondiÃ§Ãµes de Pagamento"
-              value={formData.paymentConditions}
-              onChange={(e) => setFormData({ ...formData, paymentConditions: e.target.value })}
-            />
-          </div>
-
-          <TextArea
-            label="ObservaÃ§Ãµes"
-            value={formData.observations}
-            onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-            rows={3}
-          />
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => setPageView('list')}>
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={formData.items.length === 0}>
-              Criar OrÃ§amento
+          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+            <Button type="button" variant="ghost" onClick={() => setPageView('list')}>Cancelar</Button>
+            <Button type="submit" disabled={formData.items.length === 0 || !formData.leadId}>
+              Criar Orçamento
             </Button>
           </div>
         </form>
-        </div>
-      )}
+      </div>
+      }
 
-      {/* Preview Modal */}
-      <Modal
-        isOpen={showPreviewModal}
-        onClose={() => setPageView('list')}
-        title="OrÃ§amento"
-        size="lg"
-      >
+      {/* ══════════════════════════════════════════════════════════════════
+          PREVIEW — FULL PAGE VIEW
+      ══════════════════════════════════════════════════════════════════ */}
+      {pageView === 'preview' && (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setPageView('list'); setSelectedBudget(null); }} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <ChevronLeft size={18}/>
+            Voltar para {isCalhas ? 'Orçamentos de Calhas' : 'Orçamentos de Esquadrias'}
+          </button>
+          <h2 className="text-lg font-bold text-gray-900">Visualização do Orçamento</h2>
+        </div>
         {selectedBudget && (
           <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="flex items-center gap-3">
-                {quoteSettings.logoUrl ? (
-                  <img
-                    src={quoteSettings.logoUrl}
-                    alt={quoteSettings.companyName}
-                    className="h-14 w-14 rounded-lg border border-gray-200 object-contain"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                    M
-                  </div>
-                )}
+            <div className="flex items-center justify-between border-b border-gray-200 pb-5">
+              <div className="flex items-center gap-4">
+                {quoteSettings.logoUrl
+                  ? <img src={quoteSettings.logoUrl} alt="" className="h-14 w-14 rounded-xl border border-gray-200 object-contain"/>
+                  : <div className="w-12 h-12 bg-gradient-to-br from-red-600 to-red-800 rounded-xl flex items-center justify-center text-white font-black text-xl">M</div>}
                 <div>
-                  <h1 className="text-xl font-bold">{quoteSettings.companyName}</h1>
+                  <h1 className="text-xl font-black text-gray-900">{quoteSettings.companyName}</h1>
                   <p className="text-sm text-gray-500">{quoteSettings.document}</p>
                   {quoteSettings.phone && <p className="text-sm text-gray-500">{quoteSettings.phone}</p>}
                 </div>
               </div>
               <div className="text-right">
-                <h2 className="text-lg font-bold text-red-600">ORÃAMENTO</h2>
-                <p className="text-sm text-gray-500">#{selectedBudget.id.slice(0, 8).toUpperCase()}</p>
+                <div className="text-2xl font-black text-red-600">ORÇAMENTO</div>
+                <div className="text-sm font-bold text-gray-500">#{selectedBudget.id.slice(0,8).toUpperCase()}</div>
+                <div className="text-xs text-gray-400">{format(new Date(selectedBudget.createdAt),'dd/MM/yyyy',{locale:ptBR})}</div>
               </div>
             </div>
 
-            {quoteSettings.headerText && (
-              <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                {quoteSettings.headerText}
+            {/* Client + Conditions */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Cliente</p>
+                <p className="text-lg font-bold text-gray-900">{selectedBudget.leadName}</p>
               </div>
-            )}
-
-            {/* Client */}
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-700 mb-2">Cliente</h4>
-              <p className="font-semibold text-lg">{selectedBudget.leadName}</p>
+              <div className="bg-gray-50 rounded-xl p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Condições</p>
+                <p className="text-sm text-gray-700">Validade: <strong>{selectedBudget.validity} dias</strong></p>
+                <p className="text-sm text-gray-700">Pgto: <strong>{selectedBudget.paymentConditions}</strong></p>
+              </div>
             </div>
 
-            {/* Items */}
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3">Itens</h4>
+            {/* Items by category */}
+            <div className="rounded-xl overflow-hidden border border-gray-200">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100">
+                <thead className="bg-gray-900 text-white">
                   <tr>
-                    <th className="text-left p-2">DescriÃ§Ã£o</th>
-                    <th className="text-center p-2">Qtd</th>
-                    <th className="text-right p-2">Unit.</th>
-                    <th className="text-right p-2">Total</th>
+                    <th className="text-left px-4 py-3 font-semibold">Descrição</th>
+                    <th className="text-center px-3 py-3 font-semibold w-16">Qtd</th>
+                    <th className="text-center px-3 py-3 font-semibold w-14">Un</th>
+                    {canSeePrice && <>
+                      <th className="text-right px-4 py-3 font-semibold w-24">Unit.</th>
+                      <th className="text-right px-4 py-3 font-semibold w-24">Total</th>
+                    </>}
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedBudget.items.map((item) => (
-                    <tr key={item.id} className="border-t">
-                      <td className="p-2">{item.description}</td>
-                      <td className="text-center p-2">{item.quantity} {item.unit}</td>
-                      <td className="text-right p-2">{formatCurrency(item.unitPrice)}</td>
-                      <td className="text-right p-2 font-medium">{formatCurrency(item.total)}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const groups: Record<string, BudgetItem[]> = {};
+                    selectedBudget.items.forEach(i => {
+                      const k = i.category || 'outro';
+                      if (!groups[k]) groups[k] = [];
+                      groups[k].push(i);
+                    });
+                    return Object.entries(groups).flatMap(([cat, items]) => [
+                      <tr key={`hdr-${cat}`} className="bg-red-50">
+                        <td colSpan={canSeePrice ? 5 : 3} className="px-4 py-2 text-xs font-bold uppercase tracking-wide text-red-700">
+                          {GROUP_LABELS[cat as ItemGroup] || cat}
+                        </td>
+                      </tr>,
+                      ...items.map(item => (
+                        <tr key={item.id} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-3">{item.description}</td>
+                          <td className="px-3 py-3 text-center">{item.quantity}</td>
+                          <td className="px-3 py-3 text-center">{item.unit}</td>
+                          {canSeePrice && <>
+                            <td className="px-4 py-3 text-right">{formatCurrency(item.unitPrice)}</td>
+                            <td className="px-4 py-3 text-right font-semibold">{formatCurrency(item.total)}</td>
+                          </>}
+                        </tr>
+                      ))
+                    ]);
+                  })()}
                 </tbody>
               </table>
             </div>
 
             {/* Totals */}
-            <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-              <div className="flex justify-between">
-                <span>MÃ£o de obra</span>
-                <span>{formatCurrency(selectedBudget.laborCost)}</span>
+            {canSeePrice && (
+              <div className="flex justify-end">
+                <div className="min-w-[260px] space-y-1.5">
+                  {selectedBudget.travelCost > 0 && <div className="flex justify-between text-sm text-gray-500"><span>Deslocamento</span><span>{formatCurrency(selectedBudget.travelCost)}</span></div>}
+                  <div className="flex justify-between text-sm font-medium border-t pt-2"><span>Subtotal</span><span>{formatCurrency(selectedBudget.subtotal)}</span></div>
+                  {selectedBudget.discount > 0 && (
+                    <div className="flex justify-between text-sm text-red-600">
+                      <span>Desconto</span>
+                      <span>-{formatCurrency(selectedBudget.discountType==='percentage'?(selectedBudget.subtotal*selectedBudget.discount)/100:selectedBudget.discount)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xl font-black bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl px-4 py-3 mt-2">
+                    <span>TOTAL</span>
+                    <span className="text-red-400">{formatCurrency(selectedBudget.total)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Deslocamento</span>
-                <span>{formatCurrency(selectedBudget.travelCost)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <span>Subtotal</span>
-                <span>{formatCurrency(selectedBudget.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-red-600">
-                <span>Desconto</span>
-                <span>-{formatCurrency(
-                  selectedBudget.discountType === 'percentage'
-                    ? (selectedBudget.subtotal * selectedBudget.discount) / 100
-                    : selectedBudget.discount
-                )}</span>
-              </div>
-              <div className="flex justify-between text-xl font-bold border-t pt-2">
-                <span>Total</span>
-                <span className="text-red-600">{formatCurrency(selectedBudget.total)}</span>
-              </div>
-            </div>
+            )}
 
-            {/* Conditions */}
-            <div className="text-sm text-gray-600">
-              <p><strong>Validade:</strong> {selectedBudget.validity} dias</p>
-              <p><strong>Pagamento:</strong> {selectedBudget.paymentConditions}</p>
-              {quoteSettings.pixKey && <p><strong>PIX:</strong> {quoteSettings.pixKey}</p>}
-              {selectedBudget.observations && (
-                <p><strong>ObservaÃ§Ãµes:</strong> {selectedBudget.observations}</p>
-              )}
-              {quoteSettings.footerText && (
-                <p className="mt-3 rounded-lg bg-gray-50 p-3">{quoteSettings.footerText}</p>
-              )}
-            </div>
+            {/* PIX QR */}
+            {quoteSettings.pixKey && (
+              <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent('PIX:'+quoteSettings.pixKey)}`}
+                  alt="QR PIX" className="w-20 h-20 rounded-lg border border-gray-200"/>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">Pagamento via PIX</p>
+                  <p className="font-semibold text-gray-900">{quoteSettings.pixKey}</p>
+                </div>
+              </div>
+            )}
 
-            <div className="flex flex-wrap gap-2 border-t pt-4">
-              <Button size="sm" onClick={() => handleWhatsAppBudget(selectedBudget)} icon={<MessageSquare size={16} />}>
-                Enviar WhatsApp
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => handleCopyBudget(selectedBudget)}>
-                Copiar texto
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => handleDownloadBudget(selectedBudget)} icon={<Download size={16} />}>
-                Baixar arquivo
-              </Button>
+            {selectedBudget.observations && (
+              <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                <strong>Observações:</strong> {selectedBudget.observations}
+              </div>
+            )}
+
+            {quoteSettings.footerText && (
+              <p className="text-sm text-gray-500 rounded-lg bg-gray-50 p-3">{quoteSettings.footerText}</p>
+            )}
+
+            <div className="flex flex-wrap gap-2 border-t border-gray-100 pt-4">
+              <Button size="sm" onClick={() => generatePDF(selectedBudget, quoteSettings)} icon={<Printer size={15}/>}>Gerar PDF</Button>
+              <Button size="sm" variant="ghost" onClick={() => handleWhatsApp(selectedBudget)} icon={<MessageSquare size={15}/>}>WhatsApp</Button>
+              <Button size="sm" variant="ghost" onClick={() => handleEmail(selectedBudget)} icon={<Mail size={15}/>}>E-mail</Button>
+              <Button size="sm" variant="ghost" onClick={() => handleCopy(selectedBudget)} icon={<Copy size={15}/>}>Copiar texto</Button>
             </div>
           </div>
         )}
-      </Modal>
+      </div>
+      )}
     </div>
   );
 };
