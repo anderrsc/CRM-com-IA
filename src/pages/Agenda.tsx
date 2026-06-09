@@ -17,7 +17,6 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
 import { useStore } from '../store/useStore';
 import { Visit } from '../types';
 import { 
@@ -157,7 +156,7 @@ export const Agenda: React.FC = () => {
 
   const handleOpenMap = (address: string) => {
     const ok = openMap(address);
-    if (!ok) toast.error('Endereço não informado');
+    if (!ok) toast.error('EndereÃ§o nÃ£o informado');
   };
 
   const statusColors = {
@@ -167,7 +166,7 @@ export const Agenda: React.FC = () => {
     reagendada: 'bg-red-100 text-red-700',
   };
 
-  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-fadeIn">
@@ -332,7 +331,7 @@ export const Agenda: React.FC = () => {
         {/* Quick List */}
         <Card>
           <CardHeader 
-            title="Próximas Visitas"
+            title="PrÃ³ximas Visitas"
             icon={<Navigation size={20} />}
           />
           <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -389,7 +388,7 @@ export const Agenda: React.FC = () => {
               required
             />
             <Input
-              label="Horário *"
+              label="HorÃ¡rio *"
               type="time"
               value={formData.time}
               onChange={(e) => setFormData({ ...formData, time: e.target.value })}
@@ -397,11 +396,11 @@ export const Agenda: React.FC = () => {
             />
           </div>
           <TextArea
-            label="Observações"
+            label="ObservaÃ§Ãµes"
             value={formData.observations}
             onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
             rows={3}
-            placeholder="Informações adicionais para a visita..."
+            placeholder="InformaÃ§Ãµes adicionais para a visita..."
           />
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
@@ -450,7 +449,7 @@ export const Agenda: React.FC = () => {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <Clock size={16} />
-                  <span className="text-sm">Horário</span>
+                  <span className="text-sm">HorÃ¡rio</span>
                 </div>
                 <p className="font-medium">{selectedVisit.time}</p>
               </div>
@@ -464,7 +463,7 @@ export const Agenda: React.FC = () => {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <MapPin size={16} />
-                  <span className="text-sm">Endereço</span>
+                  <span className="text-sm">EndereÃ§o</span>
                 </div>
                 <p className="font-medium text-sm">{selectedVisit.address}</p>
               </div>
@@ -472,7 +471,7 @@ export const Agenda: React.FC = () => {
 
             {selectedVisit.observations && (
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 mb-1">Observações</p>
+                <p className="text-sm font-medium text-gray-700 mb-1">ObservaÃ§Ãµes</p>
                 <p className="text-gray-600">{selectedVisit.observations}</p>
               </div>
             )}
