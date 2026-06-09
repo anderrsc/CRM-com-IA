@@ -17,7 +17,6 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { ProgressBar } from '../components/ui/Stats';
-import { Modal } from '../components/ui/Modal';
 import { useStore } from '../store/useStore';
 import { Production, ProductionStage } from '../types';
 import { format } from 'date-fns';
@@ -82,7 +81,7 @@ export const Producao: React.FC = () => {
             items: production.items,
             checklist: [
               { id: uuidv4(), description: 'Conferir medidas no local', completed: false },
-              { id: uuidv4(), description: 'Separar peças e ferragens', completed: false },
+              { id: uuidv4(), description: 'Separar peÃ§as e ferragens', completed: false },
               { id: uuidv4(), description: 'Instalar estrutura', completed: false },
               { id: uuidv4(), description: 'Conferir acabamento', completed: false },
               { id: uuidv4(), description: 'Limpeza final', completed: false },
@@ -97,14 +96,14 @@ export const Producao: React.FC = () => {
         addNotification({
           id: uuidv4(),
           type: 'success',
-          title: 'Produção finalizada',
-          message: `${production.leadName} foi enviada para instalação`,
+          title: 'ProduÃ§Ã£o finalizada',
+          message: `${production.leadName} foi enviada para instalaÃ§Ã£o`,
           read: false,
           createdAt: new Date(),
         });
-        toast.success('Produção finalizada e instalação agendada');
+        toast.success('ProduÃ§Ã£o finalizada e instalaÃ§Ã£o agendada');
       } else {
-        toast.success(`Produção avançou para ${stageConfig[nextStage].label}`);
+        toast.success(`ProduÃ§Ã£o avanÃ§ou para ${stageConfig[nextStage].label}`);
       }
     }
   };
@@ -203,7 +202,7 @@ export const Producao: React.FC = () => {
       {/* Stage Pipeline */}
       <Card>
         <CardHeader 
-          title="Pipeline de Produção"
+          title="Pipeline de ProduÃ§Ã£o"
           icon={<Factory size={20} />}
         />
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -238,8 +237,8 @@ export const Producao: React.FC = () => {
         {productions.length === 0 ? (
           <Card className="text-center py-10">
             <Factory size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma produção</h3>
-            <p className="text-gray-500">Pedidos fechados aparecerão aqui</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma produÃ§Ã£o</h3>
+            <p className="text-gray-500">Pedidos fechados aparecerÃ£o aqui</p>
           </Card>
         ) : (
           productions.map((production) => {
@@ -318,11 +317,11 @@ export const Producao: React.FC = () => {
                   <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
                     <span className="flex items-center gap-1">
                       <Calendar size={14} />
-                      Início: {format(new Date(production.startDate), 'dd/MM/yyyy', { locale: ptBR })}
+                      InÃ­cio: {format(new Date(production.startDate), 'dd/MM/yyyy', { locale: ptBR })}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock size={14} />
-                      Previsão: {format(new Date(production.estimatedEnd), 'dd/MM/yyyy', { locale: ptBR })}
+                      PrevisÃ£o: {format(new Date(production.estimatedEnd), 'dd/MM/yyyy', { locale: ptBR })}
                     </span>
                     <span className="flex items-center gap-1">
                       <User size={14} />
@@ -338,7 +337,7 @@ export const Producao: React.FC = () => {
                         size="sm"
                         icon={<ArrowRight size={16} />}
                       >
-                        Avançar Etapa
+                        AvanÃ§ar Etapa
                       </Button>
                     )}
                     <Button 
@@ -360,7 +359,7 @@ export const Producao: React.FC = () => {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title="Detalhes da Produção"
+        title="Detalhes da ProduÃ§Ã£o"
         size="lg"
       >
         {selectedProduction && (
@@ -402,13 +401,13 @@ export const Producao: React.FC = () => {
             {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Data de Início</p>
+                <p className="text-sm text-gray-500 mb-1">Data de InÃ­cio</p>
                 <p className="font-semibold">
                   {format(new Date(selectedProduction.startDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Previsão de Entrega</p>
+                <p className="text-sm text-gray-500 mb-1">PrevisÃ£o de Entrega</p>
                 <p className="font-semibold">
                   {format(new Date(selectedProduction.estimatedEnd), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
@@ -418,15 +417,15 @@ export const Producao: React.FC = () => {
             {/* History */}
             {selectedProduction.history.length > 0 && (
               <div>
-                <h4 className="font-medium text-gray-900 mb-3">Histórico</h4>
+                <h4 className="font-medium text-gray-900 mb-3">HistÃ³rico</h4>
                 <div className="space-y-3">
                   {selectedProduction.history.map((entry, index) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
                       <CheckCircle size={18} className="text-red-600" />
                       <div>
-                        <p className="font-medium">{stageConfig[entry.stage].label} concluído</p>
+                        <p className="font-medium">{stageConfig[entry.stage].label} concluÃ­do</p>
                         <p className="text-sm text-gray-500">
-                          {format(new Date(entry.completedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {entry.completedBy}
+                          {format(new Date(entry.completedAt), "dd/MM/yyyy 'Ã s' HH:mm", { locale: ptBR })} por {entry.completedBy}
                         </p>
                       </div>
                     </div>
@@ -445,7 +444,7 @@ export const Producao: React.FC = () => {
                   }}
                   icon={<ArrowRight size={18} />}
                 >
-                  Avançar para {stageConfig[stages[stages.indexOf(selectedProduction.currentStage) + 1]]?.label}
+                  AvanÃ§ar para {stageConfig[stages[stages.indexOf(selectedProduction.currentStage) + 1]]?.label}
                 </Button>
               )}
             </div>
