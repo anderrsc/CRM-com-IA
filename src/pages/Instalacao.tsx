@@ -17,7 +17,6 @@ import {
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
 import { TextArea } from '../components/ui/Input';
 import { useStore } from '../store/useStore';
 import { Installation } from '../types';
@@ -66,32 +65,32 @@ export const Instalacao: React.FC = () => {
       addNotification({
         id: uuidv4(),
         type: 'success',
-        title: 'Instalação concluída',
+        title: 'InstalaÃ§Ã£o concluÃ­da',
         message: `${installation.leadName} foi finalizado`,
         read: false,
         createdAt: new Date(),
       });
-      toast.success('Instalação concluída e cliente finalizado');
+      toast.success('InstalaÃ§Ã£o concluÃ­da e cliente finalizado');
     } else {
-      toast.success('Status da instalação atualizado');
+      toast.success('Status da instalaÃ§Ã£o atualizado');
     }
     setShowDetailModal(false);
   };
 
   const handleOpenMap = (address: string) => {
     const ok = openMap(address);
-    if (!ok) toast.error('Endereço não informado');
+    if (!ok) toast.error('EndereÃ§o nÃ£o informado');
   };
 
   const handleCall = (leadId: string) => {
     const lead = leads.find(l => l.id === leadId);
-    if (!lead || !callPhone(lead.phone)) toast.error('Telefone não encontrado');
+    if (!lead || !callPhone(lead.phone)) toast.error('Telefone nÃ£o encontrado');
   };
 
   const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
     agendada: { label: 'Agendada', color: 'bg-red-100 text-red-700', icon: Calendar },
     em_andamento: { label: 'Em Andamento', color: 'bg-red-100 text-red-700', icon: Clock },
-    concluida: { label: 'Concluída', color: 'bg-red-100 text-red-700', icon: CheckCircle },
+    concluida: { label: 'ConcluÃ­da', color: 'bg-red-100 text-red-700', icon: CheckCircle },
     problema: { label: 'Problema', color: 'bg-red-100 text-red-700', icon: AlertCircle },
   };
 
@@ -133,7 +132,7 @@ export const Instalacao: React.FC = () => {
             </div>
             <div>
               <p className="text-2xl font-bold">{completedCount}</p>
-              <p className="text-xs text-gray-500">Concluídas</p>
+              <p className="text-xs text-gray-500">ConcluÃ­das</p>
             </div>
           </div>
         </Card>
@@ -155,8 +154,8 @@ export const Instalacao: React.FC = () => {
         {installations.length === 0 ? (
           <Card className="text-center py-10">
             <Wrench size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma instalação</h3>
-            <p className="text-gray-500">Instalações de pedidos finalizados aparecerão aqui</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma instalaÃ§Ã£o</h3>
+            <p className="text-gray-500">InstalaÃ§Ãµes de pedidos finalizados aparecerÃ£o aqui</p>
           </Card>
         ) : (
           installations.map((installation) => {
@@ -196,7 +195,7 @@ export const Instalacao: React.FC = () => {
                       </p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Horário</p>
+                      <p className="text-xs text-gray-500 mb-1">HorÃ¡rio</p>
                       <p className="font-medium text-sm">{installation.time}</p>
                     </div>
                     <div className="p-3 bg-gray-50 rounded-lg">
@@ -271,7 +270,7 @@ export const Instalacao: React.FC = () => {
       <Modal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
-        title="Detalhes da Instalação"
+        title="Detalhes da InstalaÃ§Ã£o"
         size="lg"
       >
         {selectedInstallation && (
@@ -304,7 +303,7 @@ export const Instalacao: React.FC = () => {
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 text-gray-500 mb-1">
                   <Clock size={16} />
-                  <span className="text-sm">Horário</span>
+                  <span className="text-sm">HorÃ¡rio</span>
                 </div>
                 <p className="font-semibold">{selectedInstallation.time}</p>
               </div>
@@ -380,12 +379,12 @@ export const Instalacao: React.FC = () => {
 
             {/* Notes */}
             <div>
-              <h4 className="font-medium text-gray-900 mb-3">Observações</h4>
+              <h4 className="font-medium text-gray-900 mb-3">ObservaÃ§Ãµes</h4>
               <TextArea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                placeholder="Adicione observações sobre a instalação..."
+                placeholder="Adicione observaÃ§Ãµes sobre a instalaÃ§Ã£o..."
               />
             </div>
 
@@ -409,7 +408,7 @@ export const Instalacao: React.FC = () => {
                   variant="warning"
                   icon={<Clock size={18} />}
                 >
-                  Iniciar Instalação
+                  Iniciar InstalaÃ§Ã£o
                 </Button>
               )}
               {selectedInstallation.status === 'em_andamento' && (
