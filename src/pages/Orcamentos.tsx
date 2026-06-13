@@ -878,7 +878,7 @@ export const Orcamentos: React.FC<{ type?: 'calhas' | 'esquadrias' }> = ({ type 
           </div>
         </form>
       </div>
-      }
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
           PREVIEW — FULL PAGE VIEW
