@@ -238,6 +238,7 @@ ${budget.observations ? `<div style="background:#fffbeb;border:1px solid #fde68a
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
+
 type ItemGroup = 'calha' | 'rufo' | 'pingadeira' | 'acessorio' | 'instalacao';
 
 export const Orcamentos: React.FC<{ type?: 'calhas' | 'esquadrias' }> = ({ type = 'calhas' }) => {
