@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowLeft, PackagePlus, CheckCircle2, Truck, Wallet, Trash2, Plus } from 'lucide-react';
+import { PackagePlus, CheckCircle2, Truck, Wallet, Trash2, Plus   ChevronLeft,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { v4 as uuidv4 } from 'uuid';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
+// Modal removed — using full-page navigation
 import { useStore } from '../store/useStore';
 import { Purchase } from '../types';
 
@@ -23,7 +25,7 @@ const paymentLabels: Record<Purchase['paymentMethod'], string> = {
 
 export const Compras: React.FC = () => {
   const { purchases, leads, currentUser, addPurchase, updatePurchase, deletePurchase, addNotification } = useStore();
-  const [pageView, setPageView] = useState<'list' | 'new'>('list');
+  const [comprasView, setComprasView] = useState<'list' | 'new'>('list');
   const [formData, setFormData] = useState({
     leadId: '',
     supplier: '',
@@ -60,11 +62,6 @@ export const Compras: React.FC = () => {
     });
   };
 
-  const closeForm = () => {
-    resetForm();
-    setPageView('list');
-  };
-
   const handleCreate = (event: React.FormEvent) => {
     event.preventDefault();
     if (!formData.supplier.trim() || !formData.itemName.trim()) {
@@ -95,7 +92,8 @@ export const Compras: React.FC = () => {
 
     addPurchase(purchase);
     toast.success('Compra registrada');
-    closeForm();
+    setComprasView('list');
+    resetForm();
   };
 
   const handleReceive = (purchase: Purchase) => {
@@ -112,89 +110,16 @@ export const Compras: React.FC = () => {
     toast.success('Item recebido e producao avisada');
   };
 
-  if (pageView === 'new') {
-    return (
-      <div className="animate-fadeIn space-y-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button type="button" variant="ghost" onClick={closeForm} icon={<ArrowLeft size={18} />}>
-              Voltar
-            </Button>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Nova compra</h2>
-              <p className="text-sm text-gray-500">Registre material, fornecedor, pagamento e obra vinculada</p>
-            </div>
-          </div>
-        </div>
-
-        <Card className="w-full">
-          <form onSubmit={handleCreate} className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-              <Select
-                label="Obra / cliente"
-                value={formData.leadId}
-                onChange={(event) => setFormData({ ...formData, leadId: event.target.value })}
-                options={[
-                  { value: '', label: 'Sem obra vinculada' },
-                  ...leads.map((lead) => ({ value: lead.id, label: `${lead.name} - ${lead.service}` })),
-                ]}
-              />
-              <Input label="Fornecedor" value={formData.supplier} onChange={(event) => setFormData({ ...formData, supplier: event.target.value })} required />
-              <Input label="Item comprado" value={formData.itemName} onChange={(event) => setFormData({ ...formData, itemName: event.target.value })} required />
-              <Input label="Quantidade" type="number" min="0" step="0.01" value={formData.quantity} onChange={(event) => setFormData({ ...formData, quantity: Number(event.target.value) })} />
-              <Select
-                label="Unidade"
-                value={formData.unit}
-                onChange={(event) => setFormData({ ...formData, unit: event.target.value })}
-                options={[
-                  { value: 'un', label: 'un' },
-                  { value: 'm', label: 'm' },
-                  { value: 'kg', label: 'kg' },
-                  { value: 'kit', label: 'kit' },
-                ]}
-              />
-              <Input label="Valor unitario" type="number" min="0" step="0.01" value={formData.unitCost || ''} onChange={(event) => setFormData({ ...formData, unitCost: Number(event.target.value) })} />
-              <Select
-                label="Forma de pagamento"
-                value={formData.paymentMethod}
-                onChange={(event) => setFormData({ ...formData, paymentMethod: event.target.value as Purchase['paymentMethod'] })}
-                options={[
-                  { value: 'pix', label: 'PIX' },
-                  { value: 'boleto', label: 'Boleto' },
-                  { value: 'cartao', label: 'Cartao' },
-                  { value: 'dinheiro', label: 'Dinheiro' },
-                  { value: 'transferencia', label: 'Transferencia' },
-                  { value: 'outro', label: 'Outro' },
-                ]}
-              />
-              <Input label="Previsao de chegada" type="date" value={formData.expectedAt} onChange={(event) => setFormData({ ...formData, expectedAt: event.target.value })} />
-            </div>
-
-            <TextArea label="Observacoes" rows={5} value={formData.notes} onChange={(event) => setFormData({ ...formData, notes: event.target.value })} />
-
-            <div className="rounded-lg bg-gray-50 p-5 text-sm">
-              Total: <strong>{formatCurrency(formData.quantity * formData.unitCost)}</strong>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" onClick={closeForm}>Cancelar</Button>
-              <Button type="submit">Salvar compra</Button>
-            </div>
-          </form>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5 animate-fadeIn">
+      {comprasView === 'list' && <>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Compras</h2>
           <p className="text-sm text-gray-500">Controle materiais comprados, recebimento e obra vinculada</p>
         </div>
         {(currentUser?.role === 'admin' || currentUser?.role === 'compras') && (
-          <Button onClick={() => setPageView('new')} icon={<Plus size={18} />}>
+          <Button onClick={() => setComprasView('new')} icon={<Plus size={18} />}>
             Nova compra
           </Button>
         )}
@@ -296,6 +221,68 @@ export const Compras: React.FC = () => {
         )}
       </div>
 
+      </> /* end list */}
+
+      {comprasView === 'new' && (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => setComprasView('list')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+            <ChevronLeft size={18}/> Voltar para Compras
+          </button>
+          <h2 className="text-lg font-bold text-gray-900">Nova Compra</h2>
+        </div>
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select
+              label="Obra / cliente"
+              value={formData.leadId}
+              onChange={(event) => setFormData({ ...formData, leadId: event.target.value })}
+              options={[
+                { value: '', label: 'Sem obra vinculada' },
+                ...leads.map((lead) => ({ value: lead.id, label: `${lead.name} - ${lead.service}` })),
+              ]}
+            />
+            <Input label="Fornecedor" value={formData.supplier} onChange={(event) => setFormData({ ...formData, supplier: event.target.value })} required />
+            <Input label="Item comprado" value={formData.itemName} onChange={(event) => setFormData({ ...formData, itemName: event.target.value })} required />
+            <Input label="Quantidade" type="number" min="0" step="0.01" value={formData.quantity} onChange={(event) => setFormData({ ...formData, quantity: Number(event.target.value) })} />
+            <Select
+              label="Unidade"
+              value={formData.unit}
+              onChange={(event) => setFormData({ ...formData, unit: event.target.value })}
+              options={[
+                { value: 'un', label: 'un' },
+                { value: 'm', label: 'm' },
+                { value: 'kg', label: 'kg' },
+                { value: 'kit', label: 'kit' },
+              ]}
+            />
+            <Input label="Valor unitario" type="number" min="0" step="0.01" value={formData.unitCost || ''} onChange={(event) => setFormData({ ...formData, unitCost: Number(event.target.value) })} />
+            <Select
+              label="Forma de pagamento"
+              value={formData.paymentMethod}
+              onChange={(event) => setFormData({ ...formData, paymentMethod: event.target.value as Purchase['paymentMethod'] })}
+              options={[
+                { value: 'pix', label: 'PIX' },
+                { value: 'boleto', label: 'Boleto' },
+                { value: 'cartao', label: 'Cartao' },
+                { value: 'dinheiro', label: 'Dinheiro' },
+                { value: 'transferencia', label: 'Transferencia' },
+                { value: 'outro', label: 'Outro' },
+              ]}
+            />
+            <Input label="Previsao de chegada" type="date" value={formData.expectedAt} onChange={(event) => setFormData({ ...formData, expectedAt: event.target.value })} />
+          </div>
+          <TextArea label="Observacoes" rows={3} value={formData.notes} onChange={(event) => setFormData({ ...formData, notes: event.target.value })} />
+          <div className="rounded-lg bg-gray-50 p-4 text-sm">
+            Total: <strong>{formatCurrency(formData.quantity * formData.unitCost)}</strong>
+          </div>
+          <div className="flex justify-end gap-3 border-t pt-4">
+            <Button type="button" variant="ghost" onClick={() => setComprasView('list')}>Cancelar</Button>
+            <Button type="submit">Salvar compra</Button>
+          </div>
+        </form>
+      </div>
+      )}
     </div>
   );
 };
