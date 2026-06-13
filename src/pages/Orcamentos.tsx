@@ -28,8 +28,6 @@ const CUT_OPTS = ['150','200','250','300','330','350','400','500','600','700','8
 const COLOR_OPTS = ['Natural','Branco','Preto','Bronze','Grafite','Amarelo','Vermelho','Verde'];
 const UNIT_OPTS = [{ value: 'm', label: 'm' },{ value: 'un', label: 'un' },{ value: 'kg', label: 'kg' },{ value: 'kit', label: 'kit' },{ value: 'h', label: 'h' }];
 
-type ItemGroup = 'calha' | 'rufo' | 'pingadeira' | 'acessorio' | 'instalacao';
-
 interface ProductDef {
   label: string;
   group: ItemGroup;
@@ -240,6 +238,8 @@ ${budget.observations ? `<div style="background:#fffbeb;border:1px solid #fde68a
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
+type ItemGroup = 'calha' | 'rufo' | 'pingadeira' | 'acessorio' | 'instalacao';
+
 export const Orcamentos: React.FC<{ type?: 'calhas' | 'esquadrias' }> = ({ type = 'calhas' }) => {
   const {
     budgets, leads, productions, quotePriceItems, quoteSettings,
