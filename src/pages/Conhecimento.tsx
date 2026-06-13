@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { Modal } from '../components/ui/Modal';
 import { 
   BookOpen, 
   Plus, 
@@ -166,7 +165,7 @@ export const Conhecimento: React.FC = () => {
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <div className="flex-1 w-full">
             <Input
-              placeholder="Buscar por nome, descrição ou tags..."
+              placeholder="Buscar por nome, descriÃ§Ã£o ou tags..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               icon={<Search size={18} />}
@@ -239,7 +238,7 @@ export const Conhecimento: React.FC = () => {
         <Card className="text-center py-10">
           <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum item encontrado</h3>
-          <p className="text-gray-500 mb-4">Adicione itens à base de conhecimento</p>
+          <p className="text-gray-500 mb-4">Adicione itens Ã  base de conhecimento</p>
           <Button onClick={handleOpenNew} icon={<Plus size={18} />}>
             Adicionar Item
           </Button>
@@ -314,9 +313,9 @@ export const Conhecimento: React.FC = () => {
               <tr>
                 <th className="text-left p-4 font-medium text-gray-700">Nome</th>
                 <th className="text-left p-4 font-medium text-gray-700">Categoria</th>
-                <th className="text-left p-4 font-medium text-gray-700 hidden sm:table-cell">Descrição</th>
-                <th className="text-left p-4 font-medium text-gray-700 hidden md:table-cell">Faixa de Preço</th>
-                <th className="text-right p-4 font-medium text-gray-700">Ações</th>
+                <th className="text-left p-4 font-medium text-gray-700 hidden sm:table-cell">DescriÃ§Ã£o</th>
+                <th className="text-left p-4 font-medium text-gray-700 hidden md:table-cell">Faixa de PreÃ§o</th>
+                <th className="text-right p-4 font-medium text-gray-700">AÃ§Ãµes</th>
               </tr>
             </thead>
             <tbody>
@@ -383,31 +382,31 @@ export const Conhecimento: React.FC = () => {
             placeholder="Ex: Linha 25, Vidro Temperado..."
           />
           <TextArea
-            label="Descrição *"
+            label="DescriÃ§Ã£o *"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             required
             rows={3}
-            placeholder="Descreva o produto ou serviço..."
+            placeholder="Descreva o produto ou serviÃ§o..."
           />
           <TextArea
-            label="Especificações"
+            label="EspecificaÃ§Ãµes"
             value={formData.specifications}
             onChange={(e) => setFormData({ ...formData, specifications: e.target.value })}
             rows={2}
-            placeholder="Espessura, cores, dimensões..."
+            placeholder="Espessura, cores, dimensÃµes..."
           />
           <Input
-            label="Faixa de Preço"
+            label="Faixa de PreÃ§o"
             value={formData.priceRange}
             onChange={(e) => setFormData({ ...formData, priceRange: e.target.value })}
-            placeholder="Ex: R$ 350-600/m²"
+            placeholder="Ex: R$ 350-600/mÂ²"
           />
           <Input
-            label="Tags (separadas por vírgula)"
+            label="Tags (separadas por vÃ­rgula)"
             value={formData.tags}
             onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-            placeholder="residencial, premium, acústico..."
+            placeholder="residencial, premium, acÃºstico..."
           />
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button type="button" variant="ghost" onClick={() => setShowModal(false)}>
