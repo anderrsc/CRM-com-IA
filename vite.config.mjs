@@ -1,3 +1,4 @@
+// Build: 2026-06-13T21:18:31.810Z
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
