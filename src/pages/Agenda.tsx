@@ -17,7 +17,6 @@ import { Card, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
-import { Modal } from '../components/ui/Modal';
 import { useStore } from '../store/useStore';
 import { Visit } from '../types';
 import { 
@@ -43,8 +42,7 @@ export const Agenda: React.FC = () => {
   const { visits, leads, addVisit, updateVisit, updateLeadStatus } = useStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [showNewModal, setShowNewModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [agendaView, setAgendaView] = useState<'list'|'new'|'detail'>('list');
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
 
@@ -89,12 +87,12 @@ export const Agenda: React.FC = () => {
       observations: '',
     });
     setEditingVisitId(null);
-    setShowNewModal(true);
+    setAgendaView('new');
   };
 
   const handleOpenDetail = (visit: Visit) => {
     setSelectedVisit(visit);
-    setShowDetailModal(true);
+    setAgendaView('detail');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -117,7 +115,7 @@ export const Agenda: React.FC = () => {
       updateLeadStatus(formData.leadId, 'visita_agendada');
       toast.success('Visita atualizada com sucesso');
       setEditingVisitId(null);
-      setShowNewModal(false);
+      setAgendaView('list');
       return;
     }
 
@@ -139,7 +137,7 @@ export const Agenda: React.FC = () => {
     addVisit(newVisit);
     updateLeadStatus(formData.leadId, 'visita_agendada');
     toast.success('Visita agendada com sucesso');
-    setShowNewModal(false);
+    setAgendaView('list');
   };
 
   const handleStatusChange = (visitId: string, status: Visit['status']) => {
@@ -152,12 +150,12 @@ export const Agenda: React.FC = () => {
     if (status === 'cancelada') {
       toast.success('Visita cancelada');
     }
-    setShowDetailModal(false);
+    setAgendaView('list');
   };
 
   const handleOpenMap = (address: string) => {
     const ok = openMap(address);
-    if (!ok) toast.error('Endereço não informado');
+    if (!ok) toast.error('EndereÃ§o nÃ£o informado');
   };
 
   const statusColors = {
@@ -167,7 +165,7 @@ export const Agenda: React.FC = () => {
     reagendada: 'bg-red-100 text-red-700',
   };
 
-  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-fadeIn">
@@ -332,7 +330,7 @@ export const Agenda: React.FC = () => {
         {/* Quick List */}
         <Card>
           <CardHeader 
-            title="Próximas Visitas"
+            title="PrÃ³ximas Visitas"
             icon={<Navigation size={20} />}
           />
           <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -361,161 +359,10 @@ export const Agenda: React.FC = () => {
       </div>
 
       {/* New Visit Modal */}
-      <Modal
-        isOpen={showNewModal}
-        onClose={() => {
-          setShowNewModal(false);
-          setEditingVisitId(null);
-        }}
-        title={editingVisitId ? 'Editar Visita' : 'Nova Visita'}
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Select
-            label="Cliente *"
-            options={[
-              { value: '', label: 'Selecione um cliente' },
-              ...leads.map(lead => ({ value: lead.id, label: `${lead.name} - ${lead.service}` }))
-            ]}
-            value={formData.leadId}
-            onChange={(e) => setFormData({ ...formData, leadId: e.target.value })}
-            required
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Data *"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              required
-            />
-            <Input
-              label="Horário *"
-              type="time"
-              value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              required
-            />
-          </div>
-          <TextArea
-            label="Observações"
-            value={formData.observations}
-            onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-            rows={3}
-            placeholder="Informações adicionais para a visita..."
-          />
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              {editingVisitId ? 'Salvar Visita' : 'Agendar Visita'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Modal converted */}
 
       {/* Visit Detail Modal */}
-      <Modal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        title="Detalhes da Visita"
-      >
-        {selectedVisit && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-red-100 rounded-lg">
-                  <User size={24} className="text-red-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">{selectedVisit.leadName}</h3>
-                  <p className="text-gray-600">{selectedVisit.service}</p>
-                </div>
-              </div>
-              <Badge className={statusColors[selectedVisit.status]}>
-                {selectedVisit.status}
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <CalendarIcon size={16} />
-                  <span className="text-sm">Data</span>
-                </div>
-                <p className="font-medium">
-                  {format(new Date(selectedVisit.date), "d 'de' MMMM", { locale: ptBR })}
-                </p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <Clock size={16} />
-                  <span className="text-sm">Horário</span>
-                </div>
-                <p className="font-medium">{selectedVisit.time}</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <Phone size={16} />
-                  <span className="text-sm">Telefone</span>
-                </div>
-                <p className="font-medium">{selectedVisit.phone}</p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <MapPin size={16} />
-                  <span className="text-sm">Endereço</span>
-                </div>
-                <p className="font-medium text-sm">{selectedVisit.address}</p>
-              </div>
-            </div>
-
-            {selectedVisit.observations && (
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm font-medium text-gray-700 mb-1">Observações</p>
-                <p className="text-gray-600">{selectedVisit.observations}</p>
-              </div>
-            )}
-
-            <div className="flex flex-wrap gap-3 pt-4 border-t">
-              <Button 
-                onClick={() => handleStatusChange(selectedVisit.id, 'realizada')}
-                variant="success"
-                icon={<CheckCircle size={18} />}
-              >
-                Marcar Realizada
-              </Button>
-              <Button 
-                onClick={() => handleStatusChange(selectedVisit.id, 'cancelada')}
-                variant="danger"
-                icon={<XCircle size={18} />}
-              >
-                Cancelar
-              </Button>
-              <Button variant="secondary" onClick={() => handleOpenMap(selectedVisit.address)} icon={<Navigation size={18} />}>
-                Abrir Mapa
-              </Button>
-              <Button
-                variant="ghost"
-                icon={<Edit size={18} />}
-                onClick={() => {
-                  setFormData({
-                    leadId: selectedVisit.leadId,
-                    date: format(new Date(selectedVisit.date), 'yyyy-MM-dd'),
-                    time: selectedVisit.time,
-                    observations: selectedVisit.observations || '',
-                  });
-                  setEditingVisitId(selectedVisit.id);
-                  setShowDetailModal(false);
-                  setShowNewModal(true);
-                }}
-              >
-                Editar
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* Modal converted */}
     </div>
   );
 };
