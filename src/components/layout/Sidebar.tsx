@@ -4,8 +4,6 @@ import {
   Users,
   Calendar,
   FileText,
-  Palette,
-  Table2,
   Factory,
   Wrench,
   BookOpen,
@@ -19,6 +17,9 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
+  Droplets,
+  SquareDashed,
+  TableProperties,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useStore } from '../../store/useStore';
@@ -43,9 +44,10 @@ const menuItems: MenuItem[] = [
   { id: 'funil', label: 'Funil de Vendas', icon: Target, group: 'Comercial' },
   { id: 'agenda', label: 'Agenda', icon: Calendar, group: 'Comercial' },
   { id: 'visitas', label: 'Fichas de Visita', icon: ClipboardList, group: 'Comercial' },
-  { id: 'orcamentos', label: 'Orçamentos', icon: FileText, group: 'Comercial' },
-  { id: 'modelo-orcamento', label: 'Modelo do Orçamento', icon: Palette, group: 'Comercial' },
-  { id: 'tabela-calhas', label: 'Tabela de Calhas', icon: Table2, group: 'Comercial' },
+  { id: 'orcamentos-calhas', label: 'Orç. Calhas', icon: Droplets, group: 'Comercial' },
+  { id: 'orcamentos-esquadrias', label: 'Orç. Esquadrias', icon: SquareDashed, group: 'Comercial' },
+  { id: 'modelo-orcamento', label: 'Modelo do Orçamento', icon: Settings2, group: 'commercial' },
+    { id: 'tabela-calhas', label: 'Tabela de Calhas', icon: TableProperties, group: 'Comercial' },
   { id: 'compras', label: 'Compras', icon: ShoppingCart, group: 'Operação' },
   { id: 'producao', label: 'Produção', icon: Factory, group: 'Operação' },
   { id: 'instalacao', label: 'Instalação', icon: Wrench, group: 'Operação' },
@@ -56,7 +58,7 @@ const menuItems: MenuItem[] = [
 const roleAccess: Record<string, string[]> = {
   admin: menuItems.map((item) => item.id),
   gerente: menuItems.map((item) => item.id).filter((id) => id !== 'settings'),
-  vendedor: ['dashboard', 'central-ia', 'crm', 'funil', 'agenda', 'visitas', 'orcamentos', 'modelo-orcamento', 'tabela-calhas'],
+  vendedor: ['dashboard', 'central-ia', 'crm', 'funil', 'agenda', 'visitas', 'orcamentos-calhas', 'orcamentos-esquadrias', 'tabela-calhas'],
   secretaria: ['dashboard', 'central-ia', 'crm', 'funil', 'agenda', 'visitas'],
   compras: ['dashboard', 'compras', 'producao'],
   producao: ['dashboard', 'producao', 'compras'],
