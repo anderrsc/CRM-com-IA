@@ -1,4 +1,3 @@
-import { Modal } from '../components/ui/Modal';
 import React, { useState, useMemo } from 'react';
 import { 
   BookOpen, 
