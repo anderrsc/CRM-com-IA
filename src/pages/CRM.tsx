@@ -11,14 +11,19 @@ import {
   Trash2,
   Eye,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ArrowRight,
+  Star,
+  Clock,
+  Tag
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input, Select, TextArea } from '../components/ui/Input';
 import { StatusBadge, UrgencyBadge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
-import { Modal } from '../components/ui/Modal';
+// Modal removed - using full-page navigation
 import { useStore } from '../store/useStore';
 import { Lead, LeadStatus, LeadOrigin, UrgencyLevel } from '../types';
 import { format } from 'date-fns';
@@ -32,8 +37,7 @@ export const CRM: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterOrigin, setFilterOrigin] = useState<string>('all');
-  const [showNewModal, setShowNewModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [crmView, setCrmView] = useState<'list' | 'new' | 'detail'>('list');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -44,8 +48,8 @@ export const CRM: React.FC = () => {
     email: '',
     address: '',
     neighborhood: '',
-    city: 'Jaraguá do Sul',
-    state: 'SC',
+    city: 'Maringá',
+    state: 'PR',
     origin: 'whatsapp' as LeadOrigin,
     service: '',
     urgency: 'media' as UrgencyLevel,
@@ -77,8 +81,8 @@ export const CRM: React.FC = () => {
       email: '',
       address: '',
       neighborhood: '',
-      city: 'Jaraguá do Sul',
-      state: 'SC',
+      city: 'Maringá',
+      state: 'PR',
       origin: 'whatsapp',
       service: '',
       urgency: 'media',
@@ -87,12 +91,12 @@ export const CRM: React.FC = () => {
       observations: '',
     });
     setIsEditing(false);
-    setShowNewModal(true);
+    setCrmView('new');
   };
 
   const handleOpenDetail = (lead: Lead) => {
     setSelectedLead(lead);
-    setShowDetailModal(true);
+    setCrmView('detail');
   };
 
   const handleEdit = (lead: Lead) => {
@@ -113,14 +117,14 @@ export const CRM: React.FC = () => {
     });
     setSelectedLead(lead);
     setIsEditing(true);
-    setShowNewModal(true);
-    setShowDetailModal(false);
+    setCrmView('new');
+    setCrmView('list');
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir este lead?')) {
       deleteLead(id);
-      setShowDetailModal(false);
+      setCrmView('list');
     }
   };
 
@@ -146,7 +150,7 @@ export const CRM: React.FC = () => {
       toast.success('Lead criado com sucesso');
     }
     
-    setShowNewModal(false);
+    setCrmView('list');
   };
 
   const handleWhatsApp = (lead: Lead) => {
@@ -198,6 +202,8 @@ export const CRM: React.FC = () => {
 
   return (
     <div className="space-y-5 animate-fadeIn">
+      {/* List View */}
+      {crmView === 'list' && <>
       {/* Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
@@ -322,219 +328,141 @@ export const CRM: React.FC = () => {
         )}
       </div>
 
-      {/* New/Edit Modal */}
-      <Modal 
-        isOpen={showNewModal} 
-        onClose={() => setShowNewModal(false)} 
-        title={isEditing ? 'Editar Lead' : 'Novo Lead'}
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Nome *"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-            />
-            <Input
-              label="Telefone *"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              required
-            />
-            <Input
-              label="E-mail"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            />
-            <Select
-              label="Origem"
-              options={originOptions.filter(o => o.value !== 'all')}
-              value={formData.origin}
-              onChange={(e) => setFormData({ ...formData, origin: e.target.value as LeadOrigin })}
-            />
-            <Input
-              label="Endereço *"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              required
-              className="sm:col-span-2"
-            />
-            <Input
-              label="Bairro"
-              value={formData.neighborhood}
-              onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-            />
-            <Input
-              label="Cidade"
-              value={formData.city}
-              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-            />
-            <Input
-              label="Serviço *"
-              value={formData.service}
-              onChange={(e) => setFormData({ ...formData, service: e.target.value })}
-              required
-              placeholder="Ex: Janela de alumínio, Box de vidro..."
-            />
-            <Select
-              label="Urgência"
-              options={[
-                { value: 'baixa', label: 'Baixa' },
-                { value: 'media', label: 'Média' },
-                { value: 'alta', label: 'Alta' },
-                { value: 'urgente', label: 'Urgente' },
-              ]}
-              value={formData.urgency}
-              onChange={(e) => setFormData({ ...formData, urgency: e.target.value as UrgencyLevel })}
-            />
-            <Input
-              label="Valor potencial"
-              type="number"
-              min="0"
-              step="100"
-              value={formData.potentialValue}
-              onChange={(e) => setFormData({ ...formData, potentialValue: Number(e.target.value) })}
-            />
-            <Input
-              label="Disponibilidade"
-              value={formData.availability}
-              onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
-              placeholder="Ex: Terça e quinta à tarde"
-              className="sm:col-span-2"
-            />
-            <TextArea
-              label="Observações"
-              value={formData.observations}
-              onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
-              rows={3}
-              className="sm:col-span-2"
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="ghost" onClick={() => setShowNewModal(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">
-              {isEditing ? 'Salvar Alterações' : 'Criar Lead'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      </> /* end list view */}
 
-      {/* Detail Modal */}
-      <Modal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        title="Detalhes do Lead"
-        size="lg"
-      >
-        {selectedLead && (
-          <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-start gap-4">
+      {/* New/Edit — FULL PAGE VIEW */}
+      {crmView === 'new' && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setCrmView('list')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              <ChevronLeft size={18}/>
+              Voltar para CRM
+            </button>
+            <h2 className="text-lg font-bold text-gray-900">{isEditing ? 'Editar Cliente' : 'Novo Lead'}</h2>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Nome *" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                <Input label="Telefone *" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} required />
+                <Input label="E-mail" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                <Select label="Origem" options={originOptions.filter(o => o.value !== 'all')} value={formData.origin} onChange={(e) => setFormData({ ...formData, origin: e.target.value as LeadOrigin })} />
+                <Input label="Endereço *" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} required className="sm:col-span-2" />
+                <Input label="Bairro" value={formData.neighborhood} onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })} />
+                <Input label="Cidade" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                <Input label="Serviço *" value={formData.service} onChange={(e) => setFormData({ ...formData, service: e.target.value })} required placeholder="Ex: Calha platibanda, Rufo, Esquadria..." />
+                <Select label="Urgência" options={[{ value: 'baixa', label: 'Baixa' },{ value: 'media', label: 'Média' },{ value: 'alta', label: 'Alta' },{ value: 'urgente', label: 'Urgente' }]} value={formData.urgency} onChange={(e) => setFormData({ ...formData, urgency: e.target.value as UrgencyLevel })} />
+                <Input label="Valor potencial (R$)" type="number" min="0" step="100" value={formData.potentialValue} onChange={(e) => setFormData({ ...formData, potentialValue: Number(e.target.value) })} />
+                <Input label="Disponibilidade" value={formData.availability} onChange={(e) => setFormData({ ...formData, availability: e.target.value })} placeholder="Ex: Terça e quinta à tarde" className="sm:col-span-2" />
+                <TextArea label="Observações" value={formData.observations} onChange={(e) => setFormData({ ...formData, observations: e.target.value })} rows={3} className="sm:col-span-2" />
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button type="button" variant="ghost" onClick={() => setCrmView('list')}>Cancelar</Button>
+                <Button type="submit">{isEditing ? 'Salvar Alterações' : 'Criar Lead'}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detail — FULL PAGE VIEW */}
+      {crmView === 'detail' && selectedLead && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between">
+            <button onClick={() => setCrmView('list')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              <ChevronLeft size={18}/>
+              Voltar para CRM
+            </button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" onClick={() => handleWhatsApp(selectedLead)} icon={<MessageSquare size={15}/>}>WhatsApp</Button>
+              <Button size="sm" variant="ghost" onClick={() => handleOpenMap(selectedLead)} icon={<ExternalLink size={15}/>}>Mapa</Button>
+              <Button size="sm" variant="outline" onClick={() => handleEdit(selectedLead)} icon={<Edit size={15}/>}>Editar</Button>
+              <Button size="sm" variant="danger" onClick={() => handleDelete(selectedLead.id)} icon={<Trash2 size={15}/>}>Excluir</Button>
+            </div>
+          </div>
+
+          {/* Header card */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-start gap-4 mb-4">
               <Avatar name={selectedLead.name} size="xl" />
               <div className="flex-1">
-                <h3 className="text-xl font-semibold text-gray-900">{selectedLead.name}</h3>
-                <p className="text-gray-600">{selectedLead.service}</p>
+                <h3 className="text-xl font-bold text-gray-900">{selectedLead.name}</h3>
+                <p className="text-gray-600 mt-0.5">{selectedLead.service}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <StatusBadge status={selectedLead.status} />
                   <UrgencyBadge urgency={selectedLead.urgency} />
+                  {selectedLead.potentialValue ? (
+                    <span className="text-sm font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      R$ {selectedLead.potentialValue.toLocaleString('pt-BR')}
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </div>
 
-            {/* Contact Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <Phone size={16} />
-                  <span className="text-sm">Telefone</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { icon: <Phone size={15}/>, label: 'Telefone', value: selectedLead.phone },
+                { icon: <Mail size={15}/>, label: 'E-mail', value: selectedLead.email || '—' },
+                { icon: <Tag size={15}/>, label: 'Origem', value: originBadges[selectedLead.origin]?.label || selectedLead.origin },
+                { icon: <Clock size={15}/>, label: 'Cadastrado', value: format(new Date(selectedLead.createdAt), 'dd/MM/yyyy', { locale: ptBR }) },
+              ].map(item => (
+                <div key={item.label} className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 text-gray-400 mb-1">{item.icon}<span className="text-xs">{item.label}</span></div>
+                  <p className="text-sm font-semibold text-gray-900 truncate">{item.value}</p>
                 </div>
-                <p className="font-medium">{selectedLead.phone}</p>
-              </div>
-              {selectedLead.email && (
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-gray-500 mb-1">
-                    <Mail size={16} />
-                    <span className="text-sm">E-mail</span>
-                  </div>
-                  <p className="font-medium">{selectedLead.email}</p>
-                </div>
-              )}
-              <div className="p-4 bg-gray-50 rounded-lg sm:col-span-2">
-                <div className="flex items-center gap-2 text-gray-500 mb-1">
-                  <MapPin size={16} />
-                  <span className="text-sm">Endereço</span>
-                </div>
-                <p className="font-medium">
-                  {selectedLead.address}, {selectedLead.neighborhood} - {selectedLead.city}/{selectedLead.state}
-                </p>
-              </div>
-            </div>
-
-            {/* AI Summary */}
-            {selectedLead.aiSummary && (
-              <div className="p-4 bg-red-50 border border-red-100 rounded-lg">
-                <h4 className="font-medium text-red-900 mb-2">Resumo IA</h4>
-                <p className="text-red-800">{selectedLead.aiSummary}</p>
-              </div>
-            )}
-
-            {/* Observations */}
-            {selectedLead.observations && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Observações</h4>
-                <p className="text-gray-600">{selectedLead.observations}</p>
-              </div>
-            )}
-
-            {/* Messages History */}
-            {selectedLead.messages.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Histórico de Mensagens</h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {selectedLead.messages.map((msg) => (
-                    <div 
-                      key={msg.id}
-                      className={`p-3 rounded-lg ${
-                        msg.sender === 'client' ? 'bg-gray-100' : 'bg-red-50'
-                      }`}
-                    >
-                      <p className="text-sm">{msg.content}</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {format(new Date(msg.timestamp), 'dd/MM HH:mm', { locale: ptBR })}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3 pt-4 border-t">
-              <Button onClick={() => handleEdit(selectedLead)} icon={<Edit size={18} />}>
-                Editar
-              </Button>
-              <Button variant="secondary" onClick={() => handleWhatsApp(selectedLead)} icon={<MessageSquare size={18} />}>
-                WhatsApp
-              </Button>
-              <Button variant="secondary" onClick={() => handleOpenMap(selectedLead)} icon={<ExternalLink size={18} />}>
-                Ver no Mapa
-              </Button>
-              <Button 
-                variant="danger" 
-                onClick={() => handleDelete(selectedLead.id)} 
-                icon={<Trash2 size={18} />}
-              >
-                Excluir
-              </Button>
+              ))}
             </div>
           </div>
-        )}
-      </Modal>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Address */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2"><MapPin size={16} className="text-red-500"/> Endereço</h4>
+              <p className="text-gray-700">{selectedLead.address}</p>
+              {selectedLead.neighborhood && <p className="text-gray-500 text-sm mt-1">Bairro: {selectedLead.neighborhood}</p>}
+              {selectedLead.city && <p className="text-gray-500 text-sm">{selectedLead.city}{selectedLead.state ? `/${selectedLead.state}` : ''}</p>}
+              {selectedLead.availability && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs text-gray-400 mb-1">Disponibilidade</p>
+                  <p className="text-sm text-gray-700">{selectedLead.availability}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Notes / AI */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h4 className="font-semibold text-gray-900 mb-3">Observações</h4>
+              {selectedLead.aiSummary && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-lg mb-3">
+                  <p className="text-xs font-bold text-red-600 uppercase mb-1">Resumo IA</p>
+                  <p className="text-sm text-red-800">{selectedLead.aiSummary}</p>
+                </div>
+              )}
+              {selectedLead.observations ? (
+                <p className="text-sm text-gray-600">{selectedLead.observations}</p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">Sem observações</p>
+              )}
+            </div>
+          </div>
+
+          {/* Message history */}
+          {selectedLead.messages && selectedLead.messages.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h4 className="font-semibold text-gray-900 mb-3">Histórico de Mensagens</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {selectedLead.messages.map((msg) => (
+                  <div key={msg.id} className={`p-3 rounded-lg ${msg.sender === 'client' ? 'bg-gray-100' : 'bg-red-50'}`}>
+                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-xs text-gray-500 mt-1">{format(new Date(msg.timestamp), 'dd/MM HH:mm', { locale: ptBR })}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
