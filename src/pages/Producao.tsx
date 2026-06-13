@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Modal } from '../components/ui/Modal';
 import { 
   Factory, 
   CheckCircle, 
@@ -41,7 +40,6 @@ const stages: ProductionStage[] = ['corte', 'montagem', 'vidro', 'pintura', 'emb
 export const Producao: React.FC = () => {
   const { productions, purchases, updateProduction, users, leads, installations, addInstallation, updateLeadStatus, addNotification } = useStore();
   const [selectedProduction, setSelectedProduction] = useState<Production | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const handleAdvanceStage = (production: Production) => {
     const currentIndex = stages.indexOf(production.currentStage);
@@ -83,7 +81,7 @@ export const Producao: React.FC = () => {
             items: production.items,
             checklist: [
               { id: uuidv4(), description: 'Conferir medidas no local', completed: false },
-              { id: uuidv4(), description: 'Separar peças e ferragens', completed: false },
+              { id: uuidv4(), description: 'Separar peÃ§as e ferragens', completed: false },
               { id: uuidv4(), description: 'Instalar estrutura', completed: false },
               { id: uuidv4(), description: 'Conferir acabamento', completed: false },
               { id: uuidv4(), description: 'Limpeza final', completed: false },
@@ -98,21 +96,21 @@ export const Producao: React.FC = () => {
         addNotification({
           id: uuidv4(),
           type: 'success',
-          title: 'Produção finalizada',
-          message: `${production.leadName} foi enviada para instalação`,
+          title: 'ProduÃ§Ã£o finalizada',
+          message: `${production.leadName} foi enviada para instalaÃ§Ã£o`,
           read: false,
           createdAt: new Date(),
         });
-        toast.success('Produção finalizada e instalação agendada');
+        toast.success('ProduÃ§Ã£o finalizada e instalaÃ§Ã£o agendada');
       } else {
-        toast.success(`Produção avançou para ${stageConfig[nextStage].label}`);
+        toast.success(`ProduÃ§Ã£o avanÃ§ou para ${stageConfig[nextStage].label}`);
       }
     }
   };
 
   const handleOpenDetail = (production: Production) => {
     setSelectedProduction(production);
-    setShowDetailModal(true);
+    ;
   };
 
   const getProgressColor = (_progress: number): 'red' => 'red';
@@ -204,7 +202,7 @@ export const Producao: React.FC = () => {
       {/* Stage Pipeline */}
       <Card>
         <CardHeader 
-          title="Pipeline de Produção"
+          title="Pipeline de ProduÃ§Ã£o"
           icon={<Factory size={20} />}
         />
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -239,8 +237,8 @@ export const Producao: React.FC = () => {
         {productions.length === 0 ? (
           <Card className="text-center py-10">
             <Factory size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma produção</h3>
-            <p className="text-gray-500">Pedidos fechados aparecerão aqui</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma produÃ§Ã£o</h3>
+            <p className="text-gray-500">Pedidos fechados aparecerÃ£o aqui</p>
           </Card>
         ) : (
           productions.map((production) => {
@@ -319,11 +317,11 @@ export const Producao: React.FC = () => {
                   <div className="flex flex-wrap gap-4 text-sm text-gray-500 mb-4">
                     <span className="flex items-center gap-1">
                       <Calendar size={14} />
-                      Início: {format(new Date(production.startDate), 'dd/MM/yyyy', { locale: ptBR })}
+                      InÃ­cio: {format(new Date(production.startDate), 'dd/MM/yyyy', { locale: ptBR })}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock size={14} />
-                      Previsão: {format(new Date(production.estimatedEnd), 'dd/MM/yyyy', { locale: ptBR })}
+                      PrevisÃ£o: {format(new Date(production.estimatedEnd), 'dd/MM/yyyy', { locale: ptBR })}
                     </span>
                     <span className="flex items-center gap-1">
                       <User size={14} />
@@ -339,7 +337,7 @@ export const Producao: React.FC = () => {
                         size="sm"
                         icon={<ArrowRight size={16} />}
                       >
-                        Avançar Etapa
+                        AvanÃ§ar Etapa
                       </Button>
                     )}
                     <Button 
@@ -358,101 +356,7 @@ export const Producao: React.FC = () => {
       </div>
 
       {/* Detail Modal */}
-      <Modal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        title="Detalhes da Produção"
-        size="lg"
-      >
-        {selectedProduction && (
-          <div className="space-y-5">
-            {/* Header */}
-            <div className="flex items-center gap-4">
-              <div className={cn('p-4 rounded-lg', stageConfig[selectedProduction.currentStage].color)}>
-                {React.createElement(stageConfig[selectedProduction.currentStage].icon, { size: 32 })}
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold">{selectedProduction.leadName}</h3>
-                <p className="text-gray-500">Pedido #{selectedProduction.id.slice(0, 8).toUpperCase()}</p>
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div>
-              <ProgressBar 
-                value={selectedProduction.progress} 
-                color={getProgressColor(selectedProduction.progress)}
-                label="Progresso Total"
-                size="lg"
-              />
-            </div>
-
-            {/* Items */}
-            <div>
-              <h4 className="font-medium text-gray-900 mb-3">Itens</h4>
-              <div className="space-y-2">
-                {selectedProduction.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                    <Package size={16} className="text-gray-500" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Data de Início</p>
-                <p className="font-semibold">
-                  {format(new Date(selectedProduction.startDate), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-              </div>
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-500 mb-1">Previsão de Entrega</p>
-                <p className="font-semibold">
-                  {format(new Date(selectedProduction.estimatedEnd), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                </p>
-              </div>
-            </div>
-
-            {/* History */}
-            {selectedProduction.history.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">Histórico</h4>
-                <div className="space-y-3">
-                  {selectedProduction.history.map((entry, index) => (
-                    <div key={index} className="flex items-center gap-3 p-3 bg-red-50 rounded-lg">
-                      <CheckCircle size={18} className="text-red-600" />
-                      <div>
-                        <p className="font-medium">{stageConfig[entry.stage].label} concluído</p>
-                        <p className="text-sm text-gray-500">
-                          {format(new Date(entry.completedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} por {entry.completedBy}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-3 pt-4 border-t">
-              {selectedProduction.currentStage !== 'finalizado' && (
-                <Button 
-                  onClick={() => {
-                    handleAdvanceStage(selectedProduction);
-                    setShowDetailModal(false);
-                  }}
-                  icon={<ArrowRight size={18} />}
-                >
-                  Avançar para {stageConfig[stages[stages.indexOf(selectedProduction.currentStage) + 1]]?.label}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
+      {/* removed */}
     </div>
   );
 };
