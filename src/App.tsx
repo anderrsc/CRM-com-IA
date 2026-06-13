@@ -13,11 +13,11 @@ import { Agenda } from './pages/Agenda';
 import { Visitas } from './pages/Visitas';
 import { Orcamentos } from './pages/Orcamentos';
 import { TabelaCalhas } from './pages/TabelaCalhas';
-import { ModeloOrcamento } from './pages/ModeloOrcamento';
 import { Compras } from './pages/Compras';
 import { Producao } from './pages/Producao';
 import { Instalacao } from './pages/Instalacao';
 import { Conhecimento } from './pages/Conhecimento';
+import { ModeloOrcamento } from './pages/ModeloOrcamento';
 import { cn } from './utils/cn';
 import { copyText, downloadTextFile, formatCurrency } from './utils/actions';
 import { api, ApiStatus } from './services/api';
@@ -59,8 +59,9 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   agenda: { title: 'Agenda', subtitle: 'Visitas e compromissos' },
   visitas: { title: 'Fichas de Visita', subtitle: 'Gerar e imprimir fichas' },
   orcamentos: { title: 'Orçamentos', subtitle: 'Crie e envie orçamentos' },
-  'modelo-orcamento': { title: 'Modelo do Orçamento', subtitle: 'Personalize o PDF de calhas' },
-  'tabela-calhas': { title: 'Tabela de Calhas', subtitle: 'Valores por largura, espessura e metro' },
+  'orcamentos-calhas': { title: 'Orçamentos · Calhas', subtitle: 'Orçamentos de calhas e rufos' },
+  'orcamentos-esquadrias': { title: 'Orçamentos · Esquadrias', subtitle: 'Orçamentos de janelas e portas' },
+  'tabela-calhas': { title: 'Tabela de Preços · Calhas', subtitle: 'Gerencie os valores por largura e espessura' },
   compras: { title: 'Compras', subtitle: 'Materiais, fornecedores e recebimentos' },
   producao: { title: 'Produção', subtitle: 'Acompanhe a produção' },
   instalacao: { title: 'Instalação', subtitle: 'Gerenciar instalações' },
@@ -107,7 +108,11 @@ const App: React.FC = () => {
       case 'visitas':
         return <Visitas />;
       case 'orcamentos':
-        return <Orcamentos />;
+        return <Orcamentos type="calhas" />;
+      case 'orcamentos-calhas':
+        return <Orcamentos type="calhas" />;
+      case 'orcamentos-esquadrias':
+        return <Orcamentos type="esquadrias" />;
       case 'modelo-orcamento':
         return <ModeloOrcamento />;
       case 'tabela-calhas':
