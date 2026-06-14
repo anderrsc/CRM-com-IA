@@ -1,4 +1,4 @@
-// Build: 2026-06-13T21:18:31.810Z
+// Rebuild: 2026-06-14T00:28:03.143Z
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
@@ -21,6 +21,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     rollupOptions: {
+      input: "./index.html",
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
